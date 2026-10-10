@@ -1,0 +1,1304 @@
+{
+  "description": "Column schema for the measles-dashboard static dataset API. Coverage values are proportions in [0, 1]. Types: string, integer, number. Generated from src/data/schema.js by scripts/build-schema-json.mjs; do not edit by hand.",
+  "files": {
+    "data/states.csv": {
+      "description": "One row per state (national summary).",
+      "columns": [
+        {
+          "name": "state",
+          "type": "string",
+          "description": "Two-letter USPS state code",
+          "constraints": {
+            "pattern": "^[a-z]{2}$"
+          }
+        },
+        {
+          "name": "state_fips",
+          "type": "string",
+          "description": "State FIPS code (1-2 digits, not zero-padded)",
+          "constraints": {
+            "pattern": "^[0-9]{1,2}$"
+          }
+        },
+        {
+          "name": "state_name",
+          "type": "string",
+          "description": "State name"
+        },
+        {
+          "name": "n_schools",
+          "type": "integer",
+          "description": "Number of schools in the state",
+          "constraints": {
+            "min": 0
+          }
+        },
+        {
+          "name": "pct_schools_below_95",
+          "type": "number",
+          "description": "Fraction of schools below 95% coverage (0-1)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage",
+          "type": "number",
+          "description": "Overall MMR coverage (proportion, 0-1)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low",
+          "type": "number",
+          "description": "Lower bound, 95% credible interval for coverage",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high",
+          "type": "number",
+          "description": "Upper bound, 95% credible interval for coverage",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_K",
+          "type": "number",
+          "description": "Per-grade coverage (grade K)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_1",
+          "type": "number",
+          "description": "Per-grade coverage (grade 1)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_2",
+          "type": "number",
+          "description": "Per-grade coverage (grade 2)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_3",
+          "type": "number",
+          "description": "Per-grade coverage (grade 3)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_4",
+          "type": "number",
+          "description": "Per-grade coverage (grade 4)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_5",
+          "type": "number",
+          "description": "Per-grade coverage (grade 5)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_K",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade K)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_1",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade 1)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_2",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade 2)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_3",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade 3)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_4",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade 4)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_5",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade 5)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_K",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade K)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_1",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade 1)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_2",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade 2)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_3",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade 3)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_4",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade 4)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_5",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade 5)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "prob_below_95",
+          "type": "number",
+          "description": "Posterior probability that coverage is below 95%",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "tier",
+          "type": "string",
+          "description": "Coverage tier: H (>=95%), M (90-95%), L (<90%)",
+          "constraints": {
+            "enum": [
+              "H",
+              "M",
+              "L"
+            ]
+          }
+        }
+      ]
+    },
+    "data/states/{state}.csv": {
+      "description": "One row per county in a state.",
+      "columns": [
+        {
+          "name": "county",
+          "type": "string",
+          "description": "County name"
+        },
+        {
+          "name": "county_fips",
+          "type": "string",
+          "description": "5-digit county FIPS code (may be blank)",
+          "constraints": {
+            "pattern": "^[0-9]{5}$"
+          }
+        },
+        {
+          "name": "n_schools",
+          "type": "integer",
+          "description": "Number of schools in the county",
+          "constraints": {
+            "min": 0
+          }
+        },
+        {
+          "name": "pct_schools_below_95",
+          "type": "number",
+          "description": "Fraction of schools below 95% coverage (0-1)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage",
+          "type": "number",
+          "description": "Overall MMR coverage (proportion, 0-1)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low",
+          "type": "number",
+          "description": "Lower bound, 95% credible interval for coverage",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high",
+          "type": "number",
+          "description": "Upper bound, 95% credible interval for coverage",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_K",
+          "type": "number",
+          "description": "Per-grade coverage (grade K)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_1",
+          "type": "number",
+          "description": "Per-grade coverage (grade 1)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_2",
+          "type": "number",
+          "description": "Per-grade coverage (grade 2)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_3",
+          "type": "number",
+          "description": "Per-grade coverage (grade 3)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_4",
+          "type": "number",
+          "description": "Per-grade coverage (grade 4)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_5",
+          "type": "number",
+          "description": "Per-grade coverage (grade 5)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_K",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade K)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_1",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade 1)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_2",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade 2)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_3",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade 3)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_4",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade 4)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_5",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade 5)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_K",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade K)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_1",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade 1)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_2",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade 2)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_3",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade 3)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_4",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade 4)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_5",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade 5)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "prob_below_95",
+          "type": "number",
+          "description": "Posterior probability that coverage is below 95%",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "tier",
+          "type": "string",
+          "description": "Coverage tier: H (>=95%), M (90-95%), L (<90%)",
+          "constraints": {
+            "enum": [
+              "H",
+              "M",
+              "L"
+            ]
+          }
+        }
+      ]
+    },
+    "data/all-schools.csv": {
+      "description": "One row per school nationwide, with a leading state column.",
+      "columns": [
+        {
+          "name": "state",
+          "type": "string",
+          "description": "Two-letter USPS state code"
+        },
+        {
+          "name": "school_id",
+          "type": "string",
+          "description": "School identifier"
+        },
+        {
+          "name": "school_name",
+          "type": "string",
+          "description": "School name"
+        },
+        {
+          "name": "county",
+          "type": "string",
+          "description": "County name"
+        },
+        {
+          "name": "enrollment",
+          "type": "integer",
+          "description": "K-5 enrollment",
+          "constraints": {
+            "min": 0
+          }
+        },
+        {
+          "name": "lon",
+          "type": "number",
+          "description": "Longitude (may be blank)",
+          "constraints": {
+            "min": -180,
+            "max": 180
+          }
+        },
+        {
+          "name": "lat",
+          "type": "number",
+          "description": "Latitude (may be blank)",
+          "constraints": {
+            "min": -90,
+            "max": 90
+          }
+        },
+        {
+          "name": "no_data",
+          "type": "integer",
+          "description": "1 if the school has a location but no model estimate, else 0",
+          "constraints": {
+            "enum": [
+              0,
+              1
+            ]
+          }
+        },
+        {
+          "name": "coverage",
+          "type": "number",
+          "description": "Overall MMR coverage (proportion, 0-1)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low",
+          "type": "number",
+          "description": "Lower bound, 95% credible interval for coverage",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high",
+          "type": "number",
+          "description": "Upper bound, 95% credible interval for coverage",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_K",
+          "type": "number",
+          "description": "Per-grade coverage (grade K)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_1",
+          "type": "number",
+          "description": "Per-grade coverage (grade 1)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_2",
+          "type": "number",
+          "description": "Per-grade coverage (grade 2)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_3",
+          "type": "number",
+          "description": "Per-grade coverage (grade 3)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_4",
+          "type": "number",
+          "description": "Per-grade coverage (grade 4)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_5",
+          "type": "number",
+          "description": "Per-grade coverage (grade 5)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_K",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade K)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_1",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade 1)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_2",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade 2)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_3",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade 3)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_4",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade 4)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_5",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade 5)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_K",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade K)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_1",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade 1)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_2",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade 2)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_3",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade 3)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_4",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade 4)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_5",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade 5)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "prob_below_95",
+          "type": "number",
+          "description": "Posterior probability that coverage is below 95%",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "tier",
+          "type": "string",
+          "description": "Coverage tier: H (>=95%), M (90-95%), L (<90%)",
+          "constraints": {
+            "enum": [
+              "H",
+              "M",
+              "L"
+            ]
+          }
+        }
+      ]
+    },
+    "data/states/{state}/schools.csv": {
+      "description": "One row per school in a state.",
+      "columns": [
+        {
+          "name": "school_id",
+          "type": "string",
+          "description": "School identifier"
+        },
+        {
+          "name": "school_name",
+          "type": "string",
+          "description": "School name"
+        },
+        {
+          "name": "county",
+          "type": "string",
+          "description": "County name"
+        },
+        {
+          "name": "enrollment",
+          "type": "integer",
+          "description": "K-5 enrollment",
+          "constraints": {
+            "min": 0
+          }
+        },
+        {
+          "name": "lon",
+          "type": "number",
+          "description": "Longitude (may be blank)",
+          "constraints": {
+            "min": -180,
+            "max": 180
+          }
+        },
+        {
+          "name": "lat",
+          "type": "number",
+          "description": "Latitude (may be blank)",
+          "constraints": {
+            "min": -90,
+            "max": 90
+          }
+        },
+        {
+          "name": "no_data",
+          "type": "integer",
+          "description": "1 if the school has a location but no model estimate, else 0",
+          "constraints": {
+            "enum": [
+              0,
+              1
+            ]
+          }
+        },
+        {
+          "name": "coverage",
+          "type": "number",
+          "description": "Overall MMR coverage (proportion, 0-1)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low",
+          "type": "number",
+          "description": "Lower bound, 95% credible interval for coverage",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high",
+          "type": "number",
+          "description": "Upper bound, 95% credible interval for coverage",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_K",
+          "type": "number",
+          "description": "Per-grade coverage (grade K)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_1",
+          "type": "number",
+          "description": "Per-grade coverage (grade 1)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_2",
+          "type": "number",
+          "description": "Per-grade coverage (grade 2)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_3",
+          "type": "number",
+          "description": "Per-grade coverage (grade 3)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_4",
+          "type": "number",
+          "description": "Per-grade coverage (grade 4)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_5",
+          "type": "number",
+          "description": "Per-grade coverage (grade 5)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_K",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade K)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_1",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade 1)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_2",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade 2)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_3",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade 3)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_4",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade 4)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_5",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade 5)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_K",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade K)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_1",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade 1)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_2",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade 2)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_3",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade 3)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_4",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade 4)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_5",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade 5)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "prob_below_95",
+          "type": "number",
+          "description": "Posterior probability that coverage is below 95%",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "tier",
+          "type": "string",
+          "description": "Coverage tier: H (>=95%), M (90-95%), L (<90%)",
+          "constraints": {
+            "enum": [
+              "H",
+              "M",
+              "L"
+            ]
+          }
+        }
+      ]
+    },
+    "data/states/{state}/counties/{county}.csv": {
+      "description": "One row per school in a county (the county column is dropped; the path identifies the county).",
+      "columns": [
+        {
+          "name": "school_id",
+          "type": "string",
+          "description": "School identifier"
+        },
+        {
+          "name": "school_name",
+          "type": "string",
+          "description": "School name"
+        },
+        {
+          "name": "enrollment",
+          "type": "integer",
+          "description": "K-5 enrollment",
+          "constraints": {
+            "min": 0
+          }
+        },
+        {
+          "name": "lon",
+          "type": "number",
+          "description": "Longitude (may be blank)",
+          "constraints": {
+            "min": -180,
+            "max": 180
+          }
+        },
+        {
+          "name": "lat",
+          "type": "number",
+          "description": "Latitude (may be blank)",
+          "constraints": {
+            "min": -90,
+            "max": 90
+          }
+        },
+        {
+          "name": "no_data",
+          "type": "integer",
+          "description": "1 if the school has a location but no model estimate, else 0",
+          "constraints": {
+            "enum": [
+              0,
+              1
+            ]
+          }
+        },
+        {
+          "name": "coverage",
+          "type": "number",
+          "description": "Overall MMR coverage (proportion, 0-1)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low",
+          "type": "number",
+          "description": "Lower bound, 95% credible interval for coverage",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high",
+          "type": "number",
+          "description": "Upper bound, 95% credible interval for coverage",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_K",
+          "type": "number",
+          "description": "Per-grade coverage (grade K)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_1",
+          "type": "number",
+          "description": "Per-grade coverage (grade 1)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_2",
+          "type": "number",
+          "description": "Per-grade coverage (grade 2)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_3",
+          "type": "number",
+          "description": "Per-grade coverage (grade 3)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_4",
+          "type": "number",
+          "description": "Per-grade coverage (grade 4)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_5",
+          "type": "number",
+          "description": "Per-grade coverage (grade 5)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_K",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade K)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_1",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade 1)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_2",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade 2)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_3",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade 3)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_4",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade 4)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_low_5",
+          "type": "number",
+          "description": "Per-grade CI lower bound (grade 5)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_K",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade K)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_1",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade 1)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_2",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade 2)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_3",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade 3)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_4",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade 4)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "coverage_ci_high_5",
+          "type": "number",
+          "description": "Per-grade CI upper bound (grade 5)",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "prob_below_95",
+          "type": "number",
+          "description": "Posterior probability that coverage is below 95%",
+          "constraints": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "name": "tier",
+          "type": "string",
+          "description": "Coverage tier: H (>=95%), M (90-95%), L (<90%)",
+          "constraints": {
+            "enum": [
+              "H",
+              "M",
+              "L"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
