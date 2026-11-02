@@ -1,110 +1,130 @@
-# Cleaning and validating a submission
+# Preparing and validating a submission
 
-## 1. Establish what the source actually measures
+## Establish the source contract
 
-Before uploading, record the source URL/owner, access restrictions, reporting
-period, population/grades, MMR dose definition, units, suppression rules, and
-whether values are reported or modeled. Keep this information in your state
-repo's documentation. Do not upload student-level records or unrelated personal
-information. The public output is aggregate coverage by state, county, or school.
-The schema cannot establish that a value measures the right vaccine or period.
+Record the source owner and URL, reporting period, population and grades,
+MMR dose definition, units, suppression rules, and whether values are reported
+or modeled. Retain the original files and document every transformation in the
+supplier repository. Public outputs should contain aggregate coverage records;
+exclude student-level information and unrelated personal data.
 
-Use the minimum level available: state-only, county-only, or school data. A
-county-only submission still needs a state identity row; unknown state coverage
-stays blank. For school data, include county identity rows without inventing
-county coverage. A state with no releasable coverage can retain its inputs locally
-but should not publish an empty bundle as a ready data source.
+Select a consistent reporting period and population. A schema check cannot
+establish that a measurement describes the intended vaccine, dose, or year.
+Document aggregate methods and the denominator used for school counts and shares.
 
-## 2. Map and clean source data
+## Complete the templates
 
-Map source columns to the names in `schema/dashboard-schema.json` before using
-`prepare.py`. This generic tool is a formatter, not a raw spreadsheet interpreter.
-The NC and CA adapters perform their own source-specific transformations; see
-[their instructions](ITERATION-1.md).
+Copy `templates/State.csv`, `Counties.csv`, `Schools.csv`, and `Meta.json` into
+`inputs/`. Map source columns to the pinned schema before preparation. For
+supported estimates or fitted-model inputs, see [the builders](BUILDERS.md).
 
-- Use proportions from 0 to 1. Convert percent values only when source metadata
-  establishes their units; the tool rejects 94 rather than guessing it means .94.
-- Leave unavailable cells empty. Convert documented suppression markers to blanks
-  and record that decision. Do not replace suppression with zero or infer hidden
-  values. Literal `NA`, `NaN`, infinity, and `<5` are not valid numeric cells.
-- Preserve leading zeros in IDs and county FIPS. State FIPS permits one or two
-  digits; county FIPS, when supplied, requires five digits.
-- Select one documented reporting period/population. Do not combine incompatible
-  years, count duplicate schools, or silently average conflicting observations.
-- Do not manufacture credible intervals, probabilities, per-grade values, or
-  totals. A published county estimate need not equal an average of its schools.
-- Coordinates, when provided, must be longitude/latitude degrees. NC's native
-  projected coordinates cannot be relabeled as longitude/latitude.
+- `State.csv` needs exactly one row with `state`, `state_fips`, and `state_name`.
+- Every county row needs `county`. Every school row needs `school_id` and `county`.
+  School IDs must be stable and unique; document their source or assignment rule.
+- School counties must match county identity rows. Those rows may have blank
+  coverage. County names must also match the consumer's geography.
+- Supply only available measurements. Header-only county and school files are
+  valid when those levels are unavailable. At least one overall or per-grade
+  coverage measurement must exist somewhere in a completed bundle.
+- Preserve leading zeros in identifiers. State FIPS permits one or two digits
+  in the CSV; metadata requires two digits. Supplied county FIPS requires five.
+- Use proportions in `[0, 1]`. Convert percentages only when the source establishes
+  the units. Literal `NA`, `NaN`, infinity, and suppression markers are invalid
+  numeric cells. Map documented suppression markers to empty cells.
+- Missing and suppressed measurements remain blank. Do not substitute zero,
+  invent intervals, or manufacture per-grade estimates or totals.
+- Coordinates must be longitude/latitude degrees. Transform projected coordinates
+  before supplying them; do not simply rename coordinate columns.
 
-```sh
-python3 scripts/prepare.py prepare --input inputs --output output/run-1 --state nc
-python3 scripts/prepare.py validate --input output/run-1 --state nc
-```
+Complete all seven metadata fields:
 
-Preparation trims cell whitespace, keeps only schema columns, adds missing
-columns as blanks, and puts columns in schema order. It derives `tier` only from
-available overall coverage, and sets missing `no_data` to 1 for school rows with
-no overall or per-grade coverage, otherwise 0. It does not estimate coverage or
-aggregate school data. Missing geographic-level files become header-only files.
+| Field | Requirement |
+| --- | --- |
+| `code` | Lowercase two-letter state code, matching `State.csv` |
+| `name` | Uppercase abbreviation corresponding to `code` |
+| `fullName` | State display name, matching `state_name` |
+| `dataDir` | Data directory identifier using letters, digits, underscores, or hyphens |
+| `fips` | Two-digit state FIPS, matching `state_fips` after zero-padding |
+| `sourceUrl` | Absolute HTTP or HTTPS source attribution URL |
+| `sourceLabel` | Nonempty display label for the source |
 
-Extra columns and files are excluded from the output and listed in `report.json`.
-Inputs are never deleted or overwritten. Review this report: a removed column
-might be a misspelled required measurement that should have been mapped. Invalid
-or duplicate rows cause failure instead of being silently dropped. Use a new
-output directory per run to avoid carrying obsolete data into a later bundle.
+`Meta.json` must be a single object with these keys and string values. Unknown
+or duplicate keys fail validation. Metadata is preserved during preparation;
+empty placeholders are not valid submission metadata.
 
-## 3. Automated checks
-
-Validation exits nonzero for missing bundle files, incorrect headers/order,
-malformed rows, missing required identity cells, duplicate IDs/counties,
-wrong state code, school counties absent from the county table, invalid types,
-non-finite numbers, values outside schema bounds, invalid FIPS formats, reversed
-interval bounds, inconsistent coverage tiers, or `no_data=1` with coverage data.
-At least one coverage measurement is required; all optional blank cells pass.
-Tier comparisons retain the dashboard's 0.0005 boundary tolerance.
-
-Validation does **not** prove a state's code/name/FIPS combination is correct,
-resolve county aliases, verify source permissions, validate modeling methodology,
-or establish geographic coordinate accuracy. Review these against the source.
-Paired interval bounds are checked for order; estimate-versus-interval consistency
-needs review because existing producers can mix reported and modeled estimates.
-A complete identity roster with no estimates is not a ready submission.
-
-## 4. Review and dashboard integration
-
-Check record counts and excluded fields against the source. Explain partial
-coverage, suppressed cells, unmatched joins, and aggregate methods. Do not assume
-`n_schools` is the number of all schools when the source counts only modeled
-schools. Leave unavailable counts/shares blank, not zero.
-
-Transfer only the three prepared CSV files to a dashboard test checkout's
-`public/data/` tree; keep `report.json` with the supplier's review records. Merge
-this state's `states.csv` row with the existing national file rather than
-replacing the other states. Use the dashboard's state registration process.
-Then, in that checkout:
+## Prepare the bundle
 
 ```sh
-npm run derive-county-csvs
-npm run build-all-schools
-npm run validate-data
-npm test
-npm run build
+python3 scripts/prepare.py prepare --input inputs --output output/run-1
+python3 scripts/prepare.py validate --input output/run-1
 ```
 
-Review aggregate-consistency warnings; do not modify valid independent aggregate
-estimates merely to make them match child rows. Test the national, state, county,
-and download views, particularly with empty lower-level files or grade-only data.
-A passing supplier validation is not permission to mark a state ready without
-this integration check. Dashboard fetching and missing-data display may need
-changes for these partial-data profiles.
+The optional `--state` argument asserts an expected state code; otherwise the
+code comes from `Meta.json`. Output must be a new directory outside the input
+folder. Inputs are never overwritten.
 
-## Regression checks in this repository
+Preparation trims CSV cell whitespace, retains schema columns, adds missing
+columns as blanks, and orders headers. Missing county or school files become
+header-only files. `State.csv` and `Meta.json` are always required. Preparation
+derives a missing `tier` from overall coverage and a missing school `no_data`
+flag from the presence of overall or per-grade coverage. It does not aggregate
+rows, infer units, repair invalid values, or silently discard invalid records.
+
+Review `report.json`: excluded columns may reveal a misspelled measurement,
+excluded files may contain data that should have been mapped, and advisory
+warnings may identify aggregate discrepancies. Input SHA-256 checksums identify
+the exact files used. Keep source versions, transformation code, and dependency
+versions alongside this report to reproduce a run.
+
+## Automated checks
+
+Both preparation and validation fail for invalid types, non-finite values,
+out-of-range measurements, malformed CSV records, duplicate identities, missing
+identity cells, incorrect state identity, orphan school counties, invalid FIPS,
+duplicate county FIPS, county FIPS from a different state, reversed interval
+bounds, inconsistent tiers, or `no_data=1` with coverage fields populated.
+
+Validation additionally requires all four files, exact ordered CSV headers,
+trimmed cells, and no unexpected files other than `report.json`. Blank optional
+cells remain valid. Tier checks retain the consumer's `0.0005` boundary tolerance.
+State coverage outside the county coverage range, or county coverage outside the
+school coverage range, produces advisory warnings without failing a submission.
+Independent aggregate estimates may legitimately differ from child records.
+
+A nonzero exit status indicates failure. Validation does not modify files.
+
+## Review before publication
+
+Compare record counts, joins, omitted measurements, suppression handling, and
+aggregate denominators against the source. Confirm the state code/name/FIPS
+combination against an authoritative geography source: validation checks their
+internal agreement, not their official assignment. Confirm county aliases,
+coordinate accuracy, source permissions, and modeling methodology independently.
+Paired intervals are checked for order; consistency between a point estimate and
+its interval requires review when reported and modeled values are combined.
+
+```sh
+python3 scripts/prepare.py export --input output/run-1 --output output/site
+```
+
+Export requires a fully valid prepared bundle and produces the four lowercase
+files under `output/site/data/` expected by the dashboard. Retain `report.json`
+with review records. Deploy the reviewed data and register the supplier base URL
+through the consumer's maintained deployment process. This repository does not
+publish data or change the consumer's registry automatically.
+
+Test the national, state, county, school, and download views against the intended
+consumer version. Pay particular attention to header-only lower levels,
+grade-only coverage, attribution, and suppressed values. Supplier validation
+alone does not establish correct display behavior for every partial-data profile.
+
+## Regression checks
 
 ```sh
 python3 -m unittest discover -s tests -v
 Rscript scripts/build-data/tests/testthat.R
 ```
 
-The R helper suite needs `testthat` and `data.table`; NC execution additionally
-needs `jsonlite`; the model adapter additionally needs `imuGAP` and a compatible
-fit/toolchain. The helper suite alone does not exercise real NC or CA inputs.
+Use `testthat`, `data.table`, and `jsonlite` for R checks. Synthetic fixtures
+exercise transformation and validation behavior. Production model fits and
+source datasets require separate integration validation.

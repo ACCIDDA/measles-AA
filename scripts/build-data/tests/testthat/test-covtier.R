@@ -1,9 +1,3 @@
-# Coverage-tier derivation (covtier), the H/M/L thresholds the schema enum pins.
-#
-# Fit-independent and shared by both producers. schema.js declares tier in
-# {H, M, L}; covtier must produce exactly those for in-range coverage and NA for
-# missing coverage (no_data schools, NC blank per-grade county rows).
-
 test_that("covtier applies the H/M/L thresholds", {
   expect_equal(covtier(0.99), "H")   # >= 0.95
   expect_equal(covtier(0.95), "H")   # boundary inclusive

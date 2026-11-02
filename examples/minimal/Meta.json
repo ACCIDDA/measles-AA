@@ -1,0 +1,9 @@
+{
+  "code": "aa",
+  "name": "AA",
+  "fullName": "Example State",
+  "dataDir": "AA",
+  "fips": "00",
+  "sourceUrl": "https://example.org/coverage",
+  "sourceLabel": "Example data provider"
+}

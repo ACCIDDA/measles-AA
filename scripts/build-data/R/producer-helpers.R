@@ -1,30 +1,14 @@
-# Fit-independent helpers shared by the #20 CSV producers.
-#
-# These functions hold the discrete, pure logic the producers depend on but that
-# does NOT require a fitted imuGAP object: point-in-polygon county assignment,
-# county-name title-casing, coverage-gap (school-in-linkage-not-in-fit)
-# detection, and the wide #20 schema column order. They are factored out so both
-# build_state.R and build_nc_from_estimates.R can source() them, and so the
-# producer-tests workflow can exercise them with tiny synthetic fixtures instead
-# of the 484 MB CA stanfit.
-#
-# Keep this file dependency-light: data.table is the only hard dependency, and
-# only cov_block()/the schema helpers touch it indirectly. The geometry and
-# string helpers are base R so they can be tested without sf/imuGAP installed.
+# Shared helpers for data producers. Geometry and string helpers use base R.
 
 # ---- string + slug helpers ----
 
 # Lowercase, collapse non-alphanumerics to single hyphens. Used for file slugs.
 slugify <- function(x) gsub("[^a-z0-9]+", "-", tolower(trimws(x)))
 
-# Title-case county names so they match the us-atlas polygon names the dashboard
-# joins on (linkage_key ships them lowercased, e.g. "los angeles" -> "Los Angeles").
-# This is the bug that shipped twice during #54 (gray counties, then 0-schools).
+# Normalize county names to title case for geography joins.
 title_case <- function(x) gsub("\\b([a-z])", "\\U\\1", tolower(x), perl = TRUE)
 
 # Coverage tier from a fraction in 0..1: H >= 0.95, M >= 0.90, else L; NA -> NA.
-# base-R ifelse variant (build_nc_from_estimates.R, which does not load data.table
-# fifelse semantics for character NA in the same way).
 covtier <- function(v) {
   ifelse(is.na(v), NA_character_,
          ifelse(v >= 0.95, "H", ifelse(v >= 0.90, "M", "L")))
@@ -69,17 +53,12 @@ build_counties <- function(county_geo, nz = function(v) if (is.null(v) || length
   })
 }
 
-# ---- coverage-gap detection (#56/#60) ----
-# Given the loc_ids the fit actually produced (fit_ids) and the loc_ids present
-# in the linkage roster (linkage_ids), flag which roster loc_ids are absent from
-# the fit. These are the "have location data but no fit coverage" schools that
-# the producer emits as no_data (grey dots) and that surfaced Yolo + Yuba in the
-# CA fit. Returns a logical vector aligned to linkage_ids (TRUE = no_data).
+# Flag roster locations without fitted estimates.
 no_data_flag <- function(linkage_ids, fit_ids) {
   !(linkage_ids %in% fit_ids)
 }
 
-# ---- wide #20 schema column order ----
+# ---- shared schema column order ----
 # The per-row coverage block, shared by every level (state/county/school) and by
 # both producers. grade_lab defaults to K..5. This is the column-set/order
 # contract the consumer side (csvSchema.test.js) joins against.
@@ -103,3 +82,45 @@ county_columns <- function(grade_lab = c("K", "1", "2", "3", "4", "5"))
 school_columns <- function(grade_lab = c("K", "1", "2", "3", "4", "5"))
   c("school_id", "school_name", "county", "enrollment",
     "lon", "lat", "no_data", cov_block(grade_lab))
+
+# Metadata is supplied explicitly; no state identity is built into a producer.
+read_state_metadata <- function() {
+  path <- Sys.getenv("META_PATH")
+  if (!nzchar(path) || !file.exists(path)) stop("META_PATH must name a completed Meta.json")
+  meta <- jsonlite::fromJSON(path)
+  fields <- c("code", "name", "fullName", "dataDir", "fips", "sourceUrl", "sourceLabel")
+  if (!is.list(meta) || !setequal(names(meta), fields) ||
+      !all(vapply(meta, function(v) is.character(v) && length(v) == 1L &&
+                  !is.na(v) && nzchar(trimws(v)) && v == trimws(v), logical(1))))
+    stop("Meta.json must contain the seven nonempty metadata strings")
+  if (!grepl("^[a-z]{2}$", meta$code) || !grepl("^[0-9]{2}$", meta$fips) ||
+      meta$name != toupper(meta$code)) stop("Invalid metadata identity")
+  meta
+}
+
+safe_mean <- function(x) if (any(is.finite(x))) mean(x[is.finite(x)]) else NA_real_
+
+safe_weighted_mean <- function(x, w) {
+  keep <- is.finite(x) & is.finite(w) & w > 0
+  if (any(keep)) weighted.mean(x[keep], w[keep]) else NA_real_
+}
+
+write_submission <- function(state, counties, schools, out, meta) {
+  if (file.exists(out)) stop("OUT_DIR must be a new directory")
+  if (!dir.create(out, recursive = TRUE)) stop("Cannot create OUT_DIR")
+  tables <- list(State = state, Counties = counties, Schools = schools)
+  columns <- list(State = state_columns(), Counties = county_columns(), Schools = school_columns())
+  for (name in names(tables)) {
+    tab <- data.table::copy(tables[[name]])
+    for (column in names(tab)) {
+      if (is.numeric(tab[[column]])) {
+        if (any(!is.finite(tab[[column]]) & !is.na(tab[[column]])))
+          stop(paste(name, column, "contains non-finite values"))
+        data.table::set(tab, j = column, value = round(tab[[column]], 4))
+      }
+    }
+    data.table::fwrite(tab[, columns[[name]], with = FALSE],
+                      file.path(out, paste0(name, ".csv")), na = "")
+  }
+  jsonlite::write_json(meta, file.path(out, "Meta.json"), auto_unbox = TRUE, pretty = TRUE)
+}
