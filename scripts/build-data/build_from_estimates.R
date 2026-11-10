@@ -1,5 +1,5 @@
 # Build a submission from long-form estimates and school/county geography.
-# Required: INPUT_DIR, META_PATH, OUT_DIR. See docs/BUILDERS.md.
+# Required: INPUT_DIR, META_PATH, OUT_DIR. See docs/instructions.md.
 suppressMessages({library(data.table); library(jsonlite)})
 
 HELPERS <- Sys.getenv("PRODUCER_HELPERS",

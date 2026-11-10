@@ -29,10 +29,10 @@ def unique_object(pairs):
     return obj
 
 
-def load_metadata(source):
-    path = source / 'Meta.json'
+def load_metadata(source, filename='Meta.json'):
+    path = source / filename
     if not path.is_file():
-        raise ValueError('Meta.json: missing required file')
+        raise ValueError(f'{filename}: missing required file')
     meta = json.loads(path.read_text(encoding='utf-8-sig'), object_pairs_hook=unique_object)
     if not isinstance(meta, dict):
         raise ValueError('Meta.json: expected an object')
@@ -67,17 +67,21 @@ def aggregate_warnings(data):
     return warnings
 
 
-def process(source, state=None, clean=False):
+def process(source, state=None, clean=False, published=False):
     source = Path(source)
     if not source.is_dir():
         raise ValueError('input directory does not exist')
-    meta = load_metadata(source)
+    if clean and published:
+        raise ValueError('published data must be validated without normalization')
+    filenames = {name: name.lower() if published else name
+                 for name in ['Meta.json', *[name for name, _, _ in SHAPES]]}
+    meta = load_metadata(source, filenames['Meta.json'])
     state = state or meta['code']
     if state != meta['code']:
         raise ValueError('Meta.json: code disagrees with --state')
     shapes = SHAPES
     result, report, errors = {}, [], []
-    allowed = {p for p, _, _ in shapes} | {'report.json', 'Meta.json'}
+    allowed = set(filenames.values()) | (set() if published else {'report.json'})
     extras = sorted(str(p.relative_to(source)) for p in source.rglob('*') if p.is_file() and str(p.relative_to(source)) not in allowed)
     if extras:
         if clean:
@@ -85,28 +89,29 @@ def process(source, state=None, clean=False):
         else:
             errors.append('unexpected files: ' + ', '.join(extras))
     for relative, shape, required in shapes:
-        path = source / relative
+        filename = filenames[relative]
+        path = source / filename
         columns = SCHEMA[shape]['columns']
         names = [c['name'] for c in columns]
         result[relative] = []
         if not path.exists():
             if relative == 'State.csv' or not clean:
-                errors.append(f'{relative}: missing required file')
+                errors.append(f'{filename}: missing required file')
             continue
         with path.open(encoding='utf-8-sig', newline='') as handle:
             reader = csv.DictReader(handle, strict=True)
             header = reader.fieldnames or []
             if not header or len(set(header)) != len(header):
-                errors.append(f'{relative}: missing or duplicate headers')
+                errors.append(f'{filename}: missing or duplicate headers')
                 continue
             if not clean and header != names:
-                errors.append(f'{relative}: header must match pinned schema order')
+                errors.append(f'{filename}: header must match pinned schema order')
             removed = [n for n in header if n not in names]
             if removed:
                 report.append({'file': relative, 'removed_columns': removed})
             seen = set()
             for line, raw in enumerate(reader, 2):
-                label = f'{relative}:{line}'
+                label = f'{filename}:{line}'
                 if None in raw or any(v is None for v in raw.values()):
                     errors.append(f'{label}: malformed CSV row')
                     continue
@@ -213,7 +218,7 @@ def write_bundle(output, data, meta, report, export=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['prepare', 'validate', 'export'])
+    parser.add_argument('command', choices=['prepare', 'validate', 'validate-published', 'export'])
     parser.add_argument('--input', type=Path, required=True)
     parser.add_argument('--state', help='Optional expected lowercase state code; defaults to Meta.json')
     parser.add_argument('--output', type=Path)
@@ -226,10 +231,11 @@ def main():
         if writing and (args.output is None or args.output.exists()):
             raise ValueError(f'{args.command} requires a new --output directory')
         if not writing and args.output is not None:
-            raise ValueError('validate does not accept --output')
+            raise ValueError(f'{args.command} does not accept --output')
         if writing and args.output.resolve().is_relative_to(args.input.resolve()):
             raise ValueError('output must be outside the input directory')
-        data, report, _ = process(args.input, args.state, clean)
+        data, report, _ = process(args.input, args.state, clean,
+                                  published=args.command == 'validate-published')
         if writing:
             hashes = {str(p.relative_to(args.input)): hashlib.sha256(p.read_bytes()).hexdigest()
                       for p in sorted(args.input.rglob('*')) if p.is_file()}

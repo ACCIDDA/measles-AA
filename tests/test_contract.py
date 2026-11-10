@@ -105,6 +105,84 @@ class ContractTests(unittest.TestCase):
         self.assertNotEqual(self.run_cli('prepare', output=output).returncode, 0)
         self.assertFalse(output.exists())
 
+    def publish_fixture(self):
+        prepared = Path(self.temp.name) / 'prepared'
+        site = Path(self.temp.name) / 'site'
+        for command, source, output in [('prepare', self.source, prepared),
+                                        ('export', prepared, site)]:
+            result = self.run_cli(command, source, output)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        return site / 'data'
+
+    def test_published_roundtrip_is_read_only_and_accepts_sparse_grades(self):
+        self.write('State.csv', 'state,state_fips,state_name\naa,00,Example State\n')
+        self.write('Counties.csv', 'county\nExample County\n')
+        self.write('Schools.csv', 'school_id,county,coverage_K\n001,Example County,.93\n')
+        published = self.publish_fixture()
+        before = {p.name: p.read_bytes() for p in published.iterdir()}
+        result = self.run_cli('validate-published', published)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(before, {p.name: p.read_bytes() for p in published.iterdir()})
+        self.assertEqual(prepare.process(published, published=True)[0]['Schools.csv'][0]['school_id'], '001')
+        with self.assertRaisesRegex(ValueError, 'disagrees with --state'):
+            prepare.process(published, state='bb', published=True)
+        self.assertNotEqual(self.run_cli('validate-published', published,
+                                       Path(self.temp.name) / 'unused').returncode, 0)
+
+    def test_published_requires_all_four_exact_filenames(self):
+        published = self.publish_fixture()
+        for name in ['state.csv', 'counties.csv', 'schools.csv', 'meta.json']:
+            with self.subTest(name=name):
+                path = published / name
+                original = path.read_bytes()
+                path.unlink()
+                result = self.run_cli('validate-published', published)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(f'{name}: missing required file', result.stderr)
+                path.write_bytes(original)
+                renamed = path.with_name(name.capitalize())
+                path.rename(renamed)
+                self.assertNotEqual(self.run_cli('validate-published', published).returncode, 0)
+                renamed.rename(path)
+
+    def test_published_rejects_bad_data_without_normalizing(self):
+        published = self.publish_fixture()
+        path = published / 'state.csv'
+        original = path.read_text()
+        for bad in [original.replace('.94', '94'),
+                    original.replace('Example State', ' Example State'),
+                    original.replace('state,state_fips', 'state_fips,state')]:
+            with self.subTest(bad=bad):
+                path.write_text(bad)
+                self.assertNotEqual(self.run_cli('validate-published', published).returncode, 0)
+                self.assertEqual(path.read_text(), bad)
+        path.write_text(original)
+        for name in ['report.json', 'unexpected.csv', 'nested/source.txt']:
+            extra = published / name
+            extra.parent.mkdir(exist_ok=True)
+            extra.write_text('unexpected')
+            self.assertNotEqual(self.run_cli('validate-published', published).returncode, 0)
+            extra.unlink()
+
+    def test_published_checks_relationships_and_metadata(self):
+        self.write('Counties.csv', 'county\nExample County\n')
+        self.write('Schools.csv', 'school_id,county,coverage\n001,Example County,.93\n')
+        published = self.publish_fixture()
+        schools = published / 'schools.csv'
+        original = schools.read_text()
+        schools.write_text(original.replace('Example County', 'Unknown County'))
+        result = self.run_cli('validate-published', published)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('school county missing', result.stderr)
+        schools.write_text(original)
+        meta_path = published / 'meta.json'
+        meta = json.loads(meta_path.read_text())
+        meta['fips'] = '99'
+        meta_path.write_text(json.dumps(meta))
+        result = self.run_cli('validate-published', published)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('identity disagrees', result.stderr)
+
     def test_aggregate_warnings_are_advisory(self):
         self.write('Counties.csv', 'county,coverage\nExample County,.80\n')
         self.write('Schools.csv', 'school_id,county,coverage\n001,Example County,.90\n')

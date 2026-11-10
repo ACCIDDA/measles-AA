@@ -63,9 +63,17 @@ Export validates the prepared bundle and writes `data/state.csv`,
 output directory. These lowercase paths match the consumer's deployment
 contract. Publishing and registry changes are separate operations.
 
-See [validation and review](docs/VALIDATION.md),
-[optional data builders](docs/BUILDERS.md), and
-[contract maintenance](docs/DATA-CONTRACT.md).
+Copy the four exported files from `output/site/data/` into the repository's
+`data/` directory and submit them in a pull request. GitHub Actions runs Python
+contract tests, R builder tests, and a third check validating the actual published
+data. To run that check locally:
+
+```sh
+python3 scripts/prepare.py validate-published --input data
+```
+
+See [instructions](docs/instructions.md) for source mapping, validation and review,
+CI setup, optional builders, and contract maintenance.
 
 ## Development checks
 
