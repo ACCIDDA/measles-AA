@@ -73,7 +73,7 @@ python3 scripts/prepare.py validate-published --input data
 ```
 
 See [instructions](docs/instructions.md) for source mapping, validation and review,
-CI setup, optional builders, and contract maintenance.
+CI setup in your own repository, and optional builders.
 
 ## Development checks
 

@@ -1,7 +1,28 @@
 # Data preparation and publication instructions
 
-Run commands from the repository root. Python 3.10+ is required; the Python
+Use this guide in your own state data repository created from this template.
+Run commands from your repository root. Python 3.10+ is required; the Python
 workflow has no third-party dependencies. R is needed only for optional builders.
+
+## Set up your repository once
+
+The template includes `.github/workflows/validate.yml`, so you do not need to
+write CI checks. GitHub settings for running checks and requiring them before
+merging are configured in your own repository.
+
+1. Keep the workflow file on your default branch. Open your repository's
+   **Actions** tab and enable Actions if prompted. Forks require this explicitly;
+   see [GitHub's fork workflow guidance](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflows-in-forked-repositories).
+2. Run **Actions → Validate → Run workflow** on your default branch, or push a
+   commit to trigger it. The checks install their own dependencies and need no
+   additional secrets.
+3. To prevent merging invalid data, have an administrator open **Settings →
+   Rules → Rulesets** and create an active branch ruleset targeting your default
+   branch. Require pull requests and the three status checks listed under
+   "Export and submit for the CI check" below, unless your organization already
+   enforces them. These requirements are
+   GitHub settings, not part of the copied workflow file. See
+   [GitHub's ruleset setup](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository).
 
 ## 1. Map source data
 
@@ -53,6 +74,9 @@ All metadata values must be nonempty, trimmed strings. Metadata is preserved
 during preparation. Validation checks internal state identity agreement, not
 whether the code/name/FIPS is officially assigned.
 
+For a fictional trial before mapping your own data, use `examples/minimal`
+instead of `inputs` in the preparation command below.
+
 ## 2. Prepare, validate, and review
 
 ```sh
@@ -98,8 +122,7 @@ registered supplier URL; its
 [metadata loader](https://github.com/kgbrown5/measles-dashboard/blob/1fe95b854c43dbcb3fa72cfac5ff4209c292f449/src/config/states.js)
 fetches `data/meta.json`. The capitalized bundle is an intermediate preparation
 format. Commit the lowercase export for publication; both formats need not be
-published. The consumer's older API docs still describe central `states/` paths,
-which are not the supplier URLs used by these loaders.
+published.
 
 ```sh
 python3 scripts/prepare.py export --input output/prepared --output output/site
@@ -110,14 +133,15 @@ python3 scripts/prepare.py validate-published --input data
 
 Export revalidates the prepared bundle and produces these publication paths:
 
-| Prepared file | Committed/dashboard path | Pinned schema key |
-| --- | --- | --- |
-| `State.csv` | `data/state.csv` | `data/states.csv` |
-| `Counties.csv` | `data/counties.csv` | `data/states/{state}.csv` |
-| `Schools.csv` | `data/schools.csv` | `data/states/{state}/schools.csv` |
-| `Meta.json` | `data/meta.json` | `schema/meta-schema.json` |
+| Prepared file | Committed/dashboard path |
+| --- | --- |
+| `State.csv` | `data/state.csv` |
+| `Counties.csv` | `data/counties.csv` |
+| `Schools.csv` | `data/schools.csv` |
+| `Meta.json` | `data/meta.json` |
 
-Commit the four files in `data/` together and open a pull request. Keep reports
+Commit the four files in `data/` together and open a pull request into your own
+repository's default branch. Keep reports
 and source documentation outside `data/`; that directory must contain only the
 four publication files. `validate-published` applies the same strict checks
 directly to lowercase publication files, without preparing or rewriting them.
@@ -135,26 +159,23 @@ The third check is a repository check after local preparation and review. It
 fails for malformed or incomplete publication data, including deletion of all
 published files. Before any `data/` exists in the branch history, it explicitly
 reports that no submission is present; only the fictional example is exercised.
-Warnings remain advisory and appear in the Actions log. No production fit is
-available here, so CI does not run `imuGAP` prediction.
+Warnings remain advisory and appear in the Actions log. CI checks exported data
+and synthetic builder fixtures; validate your own model fit separately if using
+the fitted-model builder.
 
-After the first workflow run, a repository administrator should require all three
-named checks in the default branch ruleset and require pull requests. A failed
-push check alone cannot prevent a direct commit from being served. Any deployment
-workflow must wait for successful validation before publishing. If an automated
-publisher commits with `GITHUB_TOKEN`, its push does not normally start another
+Wait for all three checks to pass before merging. If your repository deploys
+automatically, make deployment wait for validation: a failed push check alone
+does not stop hosting. If your automated publisher commits with `GITHUB_TOKEN`,
+its push does not normally start another
 workflow: call validation in the publishing workflow before deployment, or
 explicitly dispatch this workflow. See GitHub's
 [workflow trigger rules](https://docs.github.com/en/actions/how-tos/writing-workflows/choosing-when-your-workflow-runs/triggering-a-workflow).
 
-Hosting and dashboard registration remain separate operations: serve `data/`
-at the supplier base URL with cross-origin access, add that URL (with a trailing
-slash) to the dashboard's `public/data/stateRegistry.json`, and mark the state
-`ready` in `public/data/states.json` to enable county/school loading. Committing
-files here alone does not host them or register the supplier. Test the dashboard's
-national, state, county, and school views, especially header-only levels,
-grade-only coverage, attribution, and suppression. Downloads are disabled in the
-inspected consumer; verify them if re-enabled.
+To make your data available to the dashboard, configure hosting for your
+repository so the four `data/` URLs are publicly accessible with cross-origin
+access. Send your state code and deployed base URL (with a trailing slash) to
+the dashboard maintainers for registration and activation. Confirm that your
+state, counties, schools, attribution, and missing values display correctly.
 
 ## Optional R builders
 
@@ -217,28 +238,3 @@ values with a real fit before publication.
 
 The optional prediction cache checks the fit/code checksums and `imuGAP` version.
 `FORCE_PREDICT=1` regenerates it; `CHUNK_NODES` controls batch size.
-
-## Maintaining the contract
-
-[`schema/dashboard-schema.json`](../schema/dashboard-schema.json) is the consumer
-`src/data/schema.js` snapshot verified at
-`1fe95b854c43dbcb3fa72cfac5ff4209c292f449` in
-[measles-dashboard](https://github.com/kgbrown5/measles-dashboard).
-R builders/helpers originated at `6655c7e54a9739380c3cf4eb64c2ba1bc9393b7b`.
-The snapshot includes derived national/per-county shapes; those are not supplier
-submissions. Each bundle represents one state.
-
-When updating, inspect the consumer schema, validation, metadata, and fetch paths
-at a specific commit. Update the snapshot, template headers, metadata rules,
-builders/helpers, export paths, and tests together. Keep CSV templates header-only
-and metadata placeholders empty. Run the checks below, validate representative
-partial-data bundles against the consumer, and update the verified commit here.
-
-```sh
-python3 -m unittest discover -s tests -v
-Rscript scripts/build-data/tests/testthat.R
-```
-
-R checks require `testthat`, `data.table`, and `jsonlite`. The Python estimates
-tests skip locally if R dependencies are absent; CI installs and verifies them.
-For a fictional end-to-end trial, replace `inputs` in step 2 with `examples/minimal`.
