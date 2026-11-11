@@ -1,6 +1,4 @@
-inputs/
 output/
-scripts/build-data/inputs/
 scripts/build-data/out/
 *.rds
 *.RData

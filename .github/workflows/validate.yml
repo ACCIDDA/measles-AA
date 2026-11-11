@@ -64,14 +64,18 @@ jobs:
           python-version: '3.10'
       - name: Check the preparation and export workflow with fictional data
         run: |
-          python scripts/prepare.py prepare --input examples/minimal --output "$RUNNER_TEMP/prepared"
+          python scripts/prepare.py prepare --input data/examples --output "$RUNNER_TEMP/prepared"
           python scripts/prepare.py validate --input "$RUNNER_TEMP/prepared"
           python scripts/prepare.py export --input "$RUNNER_TEMP/prepared" --output "$RUNNER_TEMP/site"
           python scripts/prepare.py validate-published --input "$RUNNER_TEMP/site/data"
       - name: Validate committed publication files
         shell: bash
         run: |
-          if [ -e data ] || [ -L data ] || [ -n "$(git log -1 --format=%H -- data)" ]; then
+          # Templates and examples are scaffolding, not a published submission.
+          publication_paths=(data ':(exclude)data/templates' ':(exclude)data/examples')
+          if [ -L data ] || [ -f data ] || \
+             [ -n "$(git ls-files -- "${publication_paths[@]}")" ] || \
+             [ -n "$(git log -1 --format=%H -- "${publication_paths[@]}")" ]; then
             python scripts/prepare.py validate-published --input data
             echo "Published data passed validation; review advisory warnings in the log." >> "$GITHUB_STEP_SUMMARY"
           else

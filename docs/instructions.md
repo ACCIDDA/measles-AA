@@ -31,18 +31,19 @@ units, suppression rules, and whether values are reported or modeled. Retain
 original files and transformation code. Publish aggregate coverage records only.
 
 ```sh
-mkdir -p inputs
-cp templates/* inputs/
+mkdir -p data
+cp data/templates/* data/
 ```
 
-Populate these files using the template headers:
+The CSV templates contain headers only; the metadata template contains empty
+fields. Populate these files directly in `data/`:
 
 | File | Required contents |
 | --- | --- |
-| `State.csv` | Exactly one row with `state`, `state_fips`, and `state_name` |
-| `Counties.csv` | Unique `county` identities and available measurements |
-| `Schools.csv` | Unique, stable `school_id` values; each `county` must match a county row |
-| `Meta.json` | The seven metadata strings below; no extra or duplicate keys |
+| `state.csv` | Exactly one row with `state`, `state_fips`, and `state_name` |
+| `counties.csv` | Unique `county` identities and available measurements |
+| `schools.csv` | Unique, stable `school_id` values; each `county` must match a county row |
+| `meta.json` | The seven metadata strings below; no extra or duplicate keys |
 
 County and school tables may be header-only. County identity rows may have
 blank measurements. A completed bundle needs at least one overall or K–5
@@ -62,7 +63,7 @@ coverage measurement at any level. Blank templates intentionally fail validation
 
 | Metadata field | Requirement |
 | --- | --- |
-| `code` | Lowercase two-letter code matching `State.csv` |
+| `code` | Lowercase two-letter code matching `state.csv` |
 | `name` | Uppercase version of `code` |
 | `fullName` | State display name matching `state_name` |
 | `dataDir` | Identifier containing only letters, digits, underscores, or hyphens |
@@ -74,19 +75,26 @@ All metadata values must be nonempty, trimmed strings. Metadata is preserved
 during preparation. Validation checks internal state identity agreement, not
 whether the code/name/FIPS is officially assigned.
 
-For a fictional trial before mapping your own data, use `examples/minimal`
-instead of `inputs` in the preparation command below.
+For a fictional trial before mapping your own data:
+
+```sh
+python3 scripts/prepare.py prepare --input data/examples --output output/example
+python3 scripts/prepare.py validate --input output/example
+```
+
+The example is a development fixture, not a submission for publication.
 
 ## 2. Prepare, validate, and review
 
 ```sh
-python3 scripts/prepare.py prepare --input inputs --output output/prepared
+python3 scripts/prepare.py prepare --input data --output output/prepared
 python3 scripts/prepare.py validate --input output/prepared
 ```
 
 Use a new output directory outside the input folder for each run. Inputs are
 never overwritten. Optional `--state xx` asserts an expected state code; otherwise
-the code comes from metadata. `inputs/` and `output/` are ignored by Git.
+the code comes from metadata. `output/` is ignored by Git; completed `data/`
+files are committed after review.
 
 Preparation trims CSV cells, orders schema columns, adds missing optional columns,
 and reports excluded columns/files. Missing county/school files become header-only
@@ -99,8 +107,10 @@ Both commands reject invalid numeric values, duplicate/missing identities,
 orphan school counties, inconsistent metadata/FIPS, reversed interval bounds,
 inconsistent tiers (with .0005 boundary tolerance), and `no_data=1` alongside
 coverage fields. Validation also requires all four files, exact ordered headers,
-trimmed cells, and no extra files except `report.json`. Failures return a nonzero
-exit status; validation never modifies data.
+trimmed cells, and no extra files except `report.json`. The reserved `templates/`
+and `examples/` subdirectories are skipped during preparation, validation, and
+input checksumming. Failures return a nonzero exit status; validation never
+modifies data.
 
 Review `report.json` for excluded fields/files, aggregate warnings, and input
 SHA-256 checksums. Coverage outside the range of child records is advisory:
@@ -120,9 +130,8 @@ The dashboard's API is static files fetched over HTTP. Its
 fetches `data/state.csv`, `data/counties.csv`, and `data/schools.csv` from each
 registered supplier URL; its
 [metadata loader](https://github.com/kgbrown5/measles-dashboard/blob/1fe95b854c43dbcb3fa72cfac5ff4209c292f449/src/config/states.js)
-fetches `data/meta.json`. The capitalized bundle is an intermediate preparation
-format. Commit the lowercase export for publication; both formats need not be
-published.
+fetches `data/meta.json`. Export revalidates the prepared bundle and places
+these four files under a `data/` subdirectory for deployment.
 
 ```sh
 python3 scripts/prepare.py export --input output/prepared --output output/site
@@ -131,20 +140,10 @@ cp output/site/data/* data/
 python3 scripts/prepare.py validate-published --input data
 ```
 
-Export revalidates the prepared bundle and produces these publication paths:
-
-| Prepared file | Committed/dashboard path |
-| --- | --- |
-| `State.csv` | `data/state.csv` |
-| `Counties.csv` | `data/counties.csv` |
-| `Schools.csv` | `data/schools.csv` |
-| `Meta.json` | `data/meta.json` |
-
 Commit the four files in `data/` together and open a pull request into your own
-repository's default branch. Keep reports
-and source documentation outside `data/`; that directory must contain only the
-four publication files. `validate-published` applies the same strict checks
-directly to lowercase publication files, without preparing or rewriting them.
+repository's default branch. Keep reports and source documentation outside
+`data/`. `validate-published` applies the strict checks directly to the publication
+files, without preparing or rewriting them; it also rejects `report.json`.
 
 The [Validate workflow](../.github/workflows/validate.yml) runs on pull requests,
 pushes, merge queues, and manual dispatch. It supplies three status checks:
@@ -157,7 +156,8 @@ pushes, merge queues, and manual dispatch. It supplies three status checks:
 
 The third check is a repository check after local preparation and review. It
 fails for malformed or incomplete publication data, including deletion of all
-published files. Before any `data/` exists in the branch history, it explicitly
+published files. Before any publication files exist in the branch history
+(excluding `data/templates/` and `data/examples/`), it explicitly
 reports that no submission is present; only the fictional example is exercised.
 Warnings remain advisory and appear in the Actions log. CI checks exported data
 and synthetic builder fixtures; validate your own model fit separately if using
@@ -181,12 +181,14 @@ state, counties, schools, attribution, and missing values display correctly.
 
 Use a builder only if its input and aggregation policies fit the source.
 Install `data.table` and `jsonlite`, supply completed metadata, and use a new
-output directory. Run `prepare.py prepare` on the builder output before export.
+output directory. Keep raw builder sources outside the publication directory;
+the examples below use the ignored `output/sources/` working directory.
+Run `prepare.py prepare` on the builder output before export.
 
 ### Existing estimates and geography
 
 ```sh
-INPUT_DIR=inputs/estimates META_PATH=inputs/Meta.json \
+INPUT_DIR=output/sources/estimates META_PATH=data/meta.json \
 OUT_DIR=output/estimates Rscript scripts/build-data/build_from_estimates.R
 python3 scripts/prepare.py prepare --input output/estimates --output output/prepared
 ```
@@ -216,10 +218,10 @@ not match the source.
 Install the `imuGAP` version/toolchain compatible with the fit, then run:
 
 ```sh
-FIT_PATH=inputs/model/fit.rds \
-CLEANED_PATH=inputs/model/cleaned_data.rds \
-LINKAGE_PATH=inputs/model/linkage_key.rds \
-META_PATH=inputs/Meta.json OUT_DIR=output/model \
+FIT_PATH=output/sources/model/fit.rds \
+CLEANED_PATH=output/sources/model/cleaned_data.rds \
+LINKAGE_PATH=output/sources/model/linkage_key.rds \
+META_PATH=data/meta.json OUT_DIR=output/model \
 COV_CACHE=output/model-cache.rds Rscript scripts/build-data/build_state.R
 python3 scripts/prepare.py prepare --input output/model --output output/prepared
 ```
@@ -238,3 +240,16 @@ values with a real fit before publication.
 
 The optional prediction cache checks the fit/code checksums and `imuGAP` version.
 `FORCE_PREDICT=1` regenerates it; `CHUNK_NODES` controls batch size.
+
+
+## Development checks
+
+Run the test suites when changing the preparation tools or builders:
+
+```sh
+python3 -m unittest discover -s tests -v
+Rscript scripts/build-data/tests/testthat.R
+```
+
+The R suite requires `testthat`, `data.table`, and `jsonlite`. Python tests also
+exercise the estimates builder when R and its dependencies are available.

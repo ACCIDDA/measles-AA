@@ -26,7 +26,7 @@ class EstimatesBuilderTests(unittest.TestCase):
         self.source = Path(self.temp.name) / 'input'
         self.source.mkdir()
         self.output = Path(self.temp.name) / 'output'
-        shutil.copy(ROOT / 'examples/minimal/Meta.json', self.source / 'Meta.json')
+        shutil.copy(ROOT / 'data/examples/meta.json', self.source / 'meta.json')
         self.features = [
             {'type': 'Feature', 'properties': {'NAME': 'Example County', 'coverage': .92},
              'geometry': {'type': 'Polygon', 'coordinates': [[[0, 0], [10, 0], [10, 10], [0, 10], [0, 0]]]}},
@@ -40,7 +40,7 @@ class EstimatesBuilderTests(unittest.TestCase):
     def run_builder(self):
         (self.source / 'locations.geojson').write_text(json.dumps({'type': 'FeatureCollection', 'features': self.features}))
         (self.source / 'estimates.csv').write_text(self.estimates)
-        env = {**os.environ, 'INPUT_DIR': str(self.source), 'META_PATH': str(self.source / 'Meta.json'), 'OUT_DIR': str(self.output)}
+        env = {**os.environ, 'INPUT_DIR': str(self.source), 'META_PATH': str(self.source / 'meta.json'), 'OUT_DIR': str(self.output)}
         return subprocess.run(['Rscript', str(ROOT / 'scripts/build-data/build_from_estimates.R')],
                               cwd=ROOT, env=env, capture_output=True, text=True)
 
@@ -48,11 +48,11 @@ class EstimatesBuilderTests(unittest.TestCase):
         result = self.run_builder()
         self.assertEqual(result.returncode, 0, result.stderr)
         data, _, _ = prepare.process(self.output)
-        rows = {row['school_id']: row for row in data['Schools.csv']}
+        rows = {row['school_id']: row for row in data['schools.csv']}
         self.assertEqual(rows['001']['coverage_K'], '0.91')
         self.assertEqual(rows['001']['coverage_5'], '')
         self.assertEqual(rows['002']['no_data'], '1')
-        self.assertEqual(data['State.csv'][0]['coverage'], '0.93')
+        self.assertEqual(data['state.csv'][0]['coverage'], '0.93')
         self.assertNotEqual(self.run_builder().returncode, 0)
 
     def test_duplicate_estimates_rejected(self):
@@ -79,5 +79,5 @@ class EstimatesBuilderTests(unittest.TestCase):
         result = self.run_builder()
         self.assertEqual(result.returncode, 0, result.stderr)
         data, _, _ = prepare.process(self.output)
-        self.assertEqual(data['State.csv'][0]['coverage'], '')
-        self.assertEqual(data['Schools.csv'][0]['enrollment'], '')
+        self.assertEqual(data['state.csv'][0]['coverage'], '')
+        self.assertEqual(data['schools.csv'][0]['enrollment'], '')

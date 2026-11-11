@@ -13,43 +13,54 @@ from urllib.parse import urlsplit
 SCHEMA = json.loads((Path(__file__).resolve().parents[1] / 'schema/dashboard-schema.json').read_text())['files']
 META_SCHEMA = json.loads((Path(__file__).resolve().parents[1] / 'schema/meta-schema.json').read_text())
 SHAPES = [
-    ('State.csv', 'data/states.csv', ['state', 'state_fips', 'state_name']),
-    ('Counties.csv', 'data/states/{state}.csv', ['county']),
-    ('Schools.csv', 'data/states/{state}/schools.csv', ['school_id', 'county']),
+    ('state.csv', 'data/states.csv', ['state', 'state_fips', 'state_name']),
+    ('counties.csv', 'data/states/{state}.csv', ['county']),
+    ('schools.csv', 'data/states/{state}/schools.csv', ['school_id', 'county']),
 ]
 MEASURES = ['coverage', 'coverage_K', *[f'coverage_{i}' for i in range(1, 6)]]
+
+
+def bundle_files(source):
+    """List input files, excluding the reserved template and example directories."""
+    for entry in sorted(source.iterdir()):
+        if entry.is_dir() and entry.name in {'templates', 'examples'}:
+            continue
+        if entry.is_file():
+            yield entry
+        elif entry.is_dir():
+            yield from sorted(p for p in entry.rglob('*') if p.is_file())
 
 
 def unique_object(pairs):
     obj = {}
     for key, value in pairs:
         if key in obj:
-            raise ValueError(f'Meta.json: duplicate key {key}')
+            raise ValueError(f'meta.json: duplicate key {key}')
         obj[key] = value
     return obj
 
 
-def load_metadata(source, filename='Meta.json'):
+def load_metadata(source, filename='meta.json'):
     path = source / filename
     if not path.is_file():
         raise ValueError(f'{filename}: missing required file')
     meta = json.loads(path.read_text(encoding='utf-8-sig'), object_pairs_hook=unique_object)
     if not isinstance(meta, dict):
-        raise ValueError('Meta.json: expected an object')
+        raise ValueError('meta.json: expected an object')
     properties = META_SCHEMA['properties']
     if set(meta) != set(properties):
-        raise ValueError('Meta.json: keys must match ' + ', '.join(properties))
+        raise ValueError('meta.json: keys must match ' + ', '.join(properties))
     for name, rule in properties.items():
         value = meta[name]
         if not isinstance(value, str) or not value.strip() or value != value.strip():
-            raise ValueError(f'Meta.json: {name} must be a nonempty, trimmed string')
+            raise ValueError(f'meta.json: {name} must be a nonempty, trimmed string')
         if 'pattern' in rule and not re.fullmatch(rule['pattern'], value):
-            raise ValueError(f'Meta.json: invalid {name}')
+            raise ValueError(f'meta.json: invalid {name}')
     url = urlsplit(meta['sourceUrl'])
     if url.scheme not in ('https', 'http') or not url.hostname or any(c.isspace() for c in meta['sourceUrl']):
-        raise ValueError('Meta.json: sourceUrl must be an absolute HTTP(S) URL')
+        raise ValueError('meta.json: sourceUrl must be an absolute HTTP(S) URL')
     if meta['name'] != meta['code'].upper():
-        raise ValueError('Meta.json: name must be the uppercase code')
+        raise ValueError('meta.json: name must be the uppercase code')
     return meta
 
 
@@ -61,9 +72,9 @@ def aggregate_warnings(data):
             value = float(parent['coverage'])
             if value < min(values) - .0005 or value > max(values) + .0005:
                 warnings.append({'warning': f'{label}: coverage outside child coverage range'})
-    for county in data['Counties.csv']:
-        compare(county['county'], county, [row for row in data['Schools.csv'] if row['county'] == county['county']])
-    compare('State.csv', data['State.csv'][0], data['Counties.csv'])
+    for county in data['counties.csv']:
+        compare(county['county'], county, [row for row in data['schools.csv'] if row['county'] == county['county']])
+    compare('state.csv', data['state.csv'][0], data['counties.csv'])
     return warnings
 
 
@@ -73,29 +84,28 @@ def process(source, state=None, clean=False, published=False):
         raise ValueError('input directory does not exist')
     if clean and published:
         raise ValueError('published data must be validated without normalization')
-    filenames = {name: name.lower() if published else name
-                 for name in ['Meta.json', *[name for name, _, _ in SHAPES]]}
-    meta = load_metadata(source, filenames['Meta.json'])
+    meta = load_metadata(source)
     state = state or meta['code']
     if state != meta['code']:
-        raise ValueError('Meta.json: code disagrees with --state')
+        raise ValueError('meta.json: code disagrees with --state')
     shapes = SHAPES
     result, report, errors = {}, [], []
-    allowed = set(filenames.values()) | (set() if published else {'report.json'})
-    extras = sorted(str(p.relative_to(source)) for p in source.rglob('*') if p.is_file() and str(p.relative_to(source)) not in allowed)
+    allowed = {'meta.json', *[name for name, _, _ in SHAPES]} | (set() if published else {'report.json'})
+    extras = sorted(str(p.relative_to(source)) for p in bundle_files(source)
+                    if str(p.relative_to(source)) not in allowed)
     if extras:
         if clean:
             report.append({'excluded_files': extras})
         else:
             errors.append('unexpected files: ' + ', '.join(extras))
     for relative, shape, required in shapes:
-        filename = filenames[relative]
+        filename = relative
         path = source / filename
         columns = SCHEMA[shape]['columns']
         names = [c['name'] for c in columns]
         result[relative] = []
         if not path.exists():
-            if relative == 'State.csv' or not clean:
+            if relative == 'state.csv' or not clean:
                 errors.append(f'{filename}: missing required file')
             continue
         with path.open(encoding='utf-8-sig', newline='') as handle:
@@ -176,24 +186,24 @@ def process(source, state=None, clean=False, published=False):
                 if row.get('no_data') == '1' and any(row[n] for n in names if n.startswith('coverage') or n in ('tier', 'prob_below_95')):
                     errors.append(f'{label}: no_data=1 conflicts with coverage data')
                 result[relative].append(row)
-    if len(result.get('State.csv', [])) != 1:
-        errors.append('State.csv must contain exactly one state row')
-    counties = {r['county'] for r in result.get('Counties.csv', [])}
-    if any(r['county'] not in counties for r in result.get('Schools.csv', [])):
+    if len(result.get('state.csv', [])) != 1:
+        errors.append('state.csv must contain exactly one state row')
+    counties = {r['county'] for r in result.get('counties.csv', [])}
+    if any(r['county'] not in counties for r in result.get('schools.csv', [])):
         errors.append('school county missing from county table')
     if not any(r[n] for rows in result.values() for r in rows for n in MEASURES):
         errors.append('submission needs at least one coverage measurement')
-    for row in result['State.csv']:
+    for row in result['state.csv']:
         if row['state_fips'].zfill(2) != meta['fips'] or row['state_name'] != meta['fullName']:
-            errors.append('State.csv: identity disagrees with Meta.json')
+            errors.append('state.csv: identity disagrees with meta.json')
     county_fips = set()
-    for row in result['Counties.csv']:
+    for row in result['counties.csv']:
         fips = row['county_fips']
         if fips:
             if not fips.startswith(meta['fips']):
-                errors.append('Counties.csv: county_fips must start with state FIPS')
+                errors.append('counties.csv: county_fips must start with state FIPS')
             if fips in county_fips:
-                errors.append('Counties.csv: duplicate county_fips')
+                errors.append('counties.csv: duplicate county_fips')
             county_fips.add(fips)
     if errors:
         raise ValueError('\n'.join(errors))
@@ -207,12 +217,12 @@ def write_bundle(output, data, meta, report, export=False):
     target = output / 'data' if export else output
     target.mkdir(exist_ok=True)
     for relative, shape, _ in SHAPES:
-        path = target / (relative.lower() if export else relative)
+        path = target / relative
         with path.open('w', newline='', encoding='utf-8') as handle:
             writer = csv.DictWriter(handle, fieldnames=[c['name'] for c in SCHEMA[shape]['columns']], lineterminator='\n')
             writer.writeheader()
             writer.writerows(data[relative])
-    (target / ('meta.json' if export else 'Meta.json')).write_text(json.dumps(meta, indent=2) + '\n', encoding='utf-8')
+    (target / 'meta.json').write_text(json.dumps(meta, indent=2) + '\n', encoding='utf-8')
     (output / 'report.json').write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
 
 
@@ -220,7 +230,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('command', choices=['prepare', 'validate', 'validate-published', 'export'])
     parser.add_argument('--input', type=Path, required=True)
-    parser.add_argument('--state', help='Optional expected lowercase state code; defaults to Meta.json')
+    parser.add_argument('--state', help='Optional expected lowercase state code; defaults to meta.json')
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
     if args.state and not re.fullmatch('[a-z]{2}', args.state):
@@ -238,7 +248,7 @@ def main():
                                   published=args.command == 'validate-published')
         if writing:
             hashes = {str(p.relative_to(args.input)): hashlib.sha256(p.read_bytes()).hexdigest()
-                      for p in sorted(args.input.rglob('*')) if p.is_file()}
+                      for p in bundle_files(args.input)}
             report.append({'input_sha256': hashes})
             write_bundle(args.output, data, load_metadata(args.input), report, args.command == 'export')
             print(f'{args.command.capitalize()} complete; review report.json.')

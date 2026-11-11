@@ -86,13 +86,13 @@ school_columns <- function(grade_lab = c("K", "1", "2", "3", "4", "5"))
 # Metadata is supplied explicitly; no state identity is built into a producer.
 read_state_metadata <- function() {
   path <- Sys.getenv("META_PATH")
-  if (!nzchar(path) || !file.exists(path)) stop("META_PATH must name a completed Meta.json")
+  if (!nzchar(path) || !file.exists(path)) stop("META_PATH must name a completed meta.json")
   meta <- jsonlite::fromJSON(path)
   fields <- c("code", "name", "fullName", "dataDir", "fips", "sourceUrl", "sourceLabel")
   if (!is.list(meta) || !setequal(names(meta), fields) ||
       !all(vapply(meta, function(v) is.character(v) && length(v) == 1L &&
                   !is.na(v) && nzchar(trimws(v)) && v == trimws(v), logical(1))))
-    stop("Meta.json must contain the seven nonempty metadata strings")
+    stop("meta.json must contain the seven nonempty metadata strings")
   if (!grepl("^[a-z]{2}$", meta$code) || !grepl("^[0-9]{2}$", meta$fips) ||
       meta$name != toupper(meta$code)) stop("Invalid metadata identity")
   meta
@@ -108,8 +108,8 @@ safe_weighted_mean <- function(x, w) {
 write_submission <- function(state, counties, schools, out, meta) {
   if (file.exists(out)) stop("OUT_DIR must be a new directory")
   if (!dir.create(out, recursive = TRUE)) stop("Cannot create OUT_DIR")
-  tables <- list(State = state, Counties = counties, Schools = schools)
-  columns <- list(State = state_columns(), Counties = county_columns(), Schools = school_columns())
+  tables <- list(state = state, counties = counties, schools = schools)
+  columns <- list(state = state_columns(), counties = county_columns(), schools = school_columns())
   for (name in names(tables)) {
     tab <- data.table::copy(tables[[name]])
     for (column in names(tab)) {
@@ -122,5 +122,5 @@ write_submission <- function(state, counties, schools, out, meta) {
     data.table::fwrite(tab[, columns[[name]], with = FALSE],
                       file.path(out, paste0(name, ".csv")), na = "")
   }
-  jsonlite::write_json(meta, file.path(out, "Meta.json"), auto_unbox = TRUE, pretty = TRUE)
+  jsonlite::write_json(meta, file.path(out, "meta.json"), auto_unbox = TRUE, pretty = TRUE)
 }
