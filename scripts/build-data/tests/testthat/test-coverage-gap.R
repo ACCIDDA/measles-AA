@@ -1,10 +1,3 @@
-# Coverage-gap detection (build_state.R assemble: no_data flag, #56/#60).
-#
-# A school present in the linkage roster but absent from the fit must be flagged
-# no_data (rendered as a grey dot, excluded from aggregate stats). This is what
-# surfaced Yolo + Yuba in the CA fit. no_data_flag(linkage_ids, fit_ids) is the
-# extracted predicate.
-
 test_that("schools in linkage but absent from the fit are flagged no_data", {
   linkage_ids <- c("1", "2", "3", "4")
   fit_ids     <- c("1", "3")          # 2 and 4 are missing from the fit
@@ -33,11 +26,11 @@ test_that("the reported gap counties match the missing schools", {
   # Mirror the producer's reporting: which county names own the no_data schools.
   schools <- data.frame(
     loc_id      = c("1", "2", "3"),
-    county_name = c("yolo", "yuba", "los angeles"),
+    county_name = c("west", "east", "central valley"),
     stringsAsFactors = FALSE
   )
-  fit_ids <- c("3")   # only LA school is in the fit
+  fit_ids <- c("3")   # only central school is in the fit
   schools$no_data <- no_data_flag(schools$loc_id, fit_ids)
   gap_counties <- sort(unique(schools$county_name[schools$no_data]))
-  expect_equal(gap_counties, c("yolo", "yuba"))
+  expect_equal(gap_counties, c("east", "west"))
 })

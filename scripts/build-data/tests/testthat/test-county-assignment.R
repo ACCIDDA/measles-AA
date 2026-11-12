@@ -1,12 +1,3 @@
-# Point-in-polygon county assignment (build_nc_from_estimates.R).
-#
-# Tiny synthetic fixture: two adjacent unit squares standing in for county
-# polygons in a planar CRS (the NC producer runs PIP in native EPSG:2264, so no
-# reprojection is involved and plain x/y squares are a faithful stand-in).
-#   "West"  = [0,10] x [0,10]
-#   "East"  = [10,20] x [0,10]
-# Geojson rings are closed (first point repeated), matching build_counties input.
-
 make_square <- function(name, x0, x1, y0, y1, coverage = 0.9) {
   list(properties = list(NAME = name, coverage = coverage,
                          cov_low = NULL, cov_high = NULL,

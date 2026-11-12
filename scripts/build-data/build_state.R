@@ -1,24 +1,10 @@
-# Generic imuGAP -> dashboard CSV producer (#20).
-#
-# State-agnostic: give it a fitted imuGAP object + the standardized
-# tidyschoolvax/run_imugap outputs (cleaned_data, linkage_key) + state metadata,
-# and it emits the #20 schema:
-#   <out>/states.csv                          (one row per state; appended)
-#   <out>/states/<slug>.csv                   (one row per county)
-#   <out>/states/<slug>/counties/<cty>.csv    (one row per school)
-#
-# Approach settled in probe_aggregate.R: coverage at every level = predict() at
-# that loc_id NODE (state=root, counties=layer2, schools=layer3), grades K-5 =
-# ages 5-10 taken as a single-year cross-section via create_target(mode="snapshot").
-#
-# Modes:
-#   FIT_PATH=<rds>            real run (also needs CLEANED_PATH, LINKAGE_PATH, STATE)
-#   STUB=1                    join/format test on real inputs w/ placeholder coverage
-suppressMessages({library(imuGAP); library(data.table)})
+# Build a submission from an imuGAP fit and standardized cleaned/linkage inputs.
+# Required: FIT_PATH, CLEANED_PATH, LINKAGE_PATH, META_PATH, OUT_DIR.
+# Coverage is predicted at each location node for grades K-5.
+suppressMessages({library(imuGAP); library(data.table); library(jsonlite)})
 
 # Fit-independent helpers (slugify, title_case, no_data_flag, cov_block, ...) are
-# factored into R/producer-helpers.R so the producer-tests workflow can exercise
-# them with tiny fixtures. See scripts/build-data/R/producer-helpers.R.
+# factored into R/producer-helpers.R and exercised with synthetic fixtures.
 HELPERS <- Sys.getenv("PRODUCER_HELPERS",
                       unset = "scripts/build-data/R/producer-helpers.R")
 source(HELPERS)
@@ -28,7 +14,7 @@ GRADE_LAB  <- c("K", "1", "2", "3", "4", "5")   # age 5 -> K ... age 10 -> 5th
 THRESHOLD  <- 0.95
 
 # linkage_key and cleaned_data use DIFFERENT school_id systems, so we bridge
-# them on normalized school-name + county (96% match; ids don't correspond).
+# them on normalized school-name + county.
 norm_name <- function(x) {
   x <- tolower(trimws(x)); x <- gsub("[[:punct:]]", " ", x)
   x <- gsub("\\b(school|schools)\\b", "", x); gsub("\\s+", " ", trimws(x))
@@ -41,12 +27,8 @@ covtier  <- function(v) fifelse(is.na(v), NA_character_,
 
 #' Predict coverage at every location node, per grade and overall
 #'
-#' Batched because predicting all ~7936 nodes x 6 grades in one `gqs()` call
-#' exhausts RAM (4000 draws x 47616 obs). The node list is chunked, each chunk
-#' predicted, and reduced to per-(loc_id, grade) + per-(loc_id) summaries
-#' immediately so only summaries (not raw draws) accumulate. Each loc_id lives
-#' wholly within one chunk, so the overall-coverage CI and `prob_below_95`
-#' (per-node reductions over draws) remain exact.
+#' Predict in chunks and reduce draws immediately to limit peak memory.
+#' Each location remains within one chunk for consistent interval summaries.
 #'
 #' @param fit a fitted `imugap_fit` object.
 #' @param grade_ages integer ages mapped to grades K-5 (default 5:10).
@@ -128,7 +110,7 @@ assemble <- function(cov, cleaned, linkage, state_meta, county_fips_map = NULL) 
   # ---- schools: identity (from linkage, by model loc_id) + enrollment/reported
   #      (from cleaned, bridged on normalized name+county since school_ids differ)
   # Build identity from linkage rows that have a loc_id (rows with NA loc_id are
-  # junk). Some fit schools have a loc_id + county but no school_name in the
+  # excluded). Some fit schools have a loc_id + county but no school_name in the
   # linkage; they're kept (valid coverage, just unlabeled / placed via fallback).
   sch_key <- unique(linkage[!is.na(school_loc_id),
                             .(loc_id = as.character(school_loc_id), school_id,
@@ -141,7 +123,7 @@ assemble <- function(cov, cleaned, linkage, state_meta, county_fips_map = NULL) 
                               current / enrollment, NA_real_)]
   sch_key <- enr[sch_key, on = "nm"]
   sch_key[, nm := NULL]
-  # Keep ALL linkage schools, not just those with a coverage row (#60). Join is
+  # Keep ALL linkage schools, not just those with a coverage row. Join is
   # driven by the linkage roster (sch_key) so schools present in the location
   # data but absent from the fit survive with NA coverage; they're flagged
   # no_data and the UI renders a grey dot at their lon/lat instead of dropping
@@ -149,20 +131,20 @@ assemble <- function(cov, cleaned, linkage, state_meta, county_fips_map = NULL) 
   base_sch <- base[level == "school"]
   fit_ids <- base_sch$loc_id                       # loc_ids the model actually produced
   schools <- base_sch[sch_key, on = "loc_id"]
-  schools[, no_data := no_data_flag(loc_id, fit_ids)]  # in linkage but not in the fit (#56/#60)
+  schools[, no_data := no_data_flag(loc_id, fit_ids)]  # in linkage but not in the fit
 
   # Use reported kindergarten coverage where available, else the model value
-  # (#58). Only for fit schools; no_data schools have no model coverage at all.
+  # Only for fit schools; no_data schools have no model coverage at all.
   schools[no_data == FALSE & !is.na(reported_K), coverage_K := reported_K]
   # overall = mean of per-grade where present; NA for no_data schools.
   schools[, coverage := {
     m <- rowMeans(as.matrix(.SD), na.rm = TRUE)
     fifelse(is.nan(m), NA_real_, m)
   }, .SDcols = paste0("coverage_", glab)]
-  schools[no_data == TRUE, coverage := NA_real_]   # belt-and-suspenders: no estimate
+  schools[no_data == TRUE, coverage := NA_real_]   # preserve missing estimates
   schools[, tier := covtier(coverage)]
 
-  # Integrity check (#60): a school in the fit but with no location record at all
+  # Integrity check: a school in the fit but with no location record at all
   # (no county to even associate it with) is a real data-sync problem -> fail the
   # build. Schools that have a county but lack a name and/or lon/lat are kept:
   # they have valid coverage and fall back to deterministic in-polygon placement.
@@ -205,89 +187,44 @@ assemble <- function(cov, cleaned, linkage, state_meta, county_fips_map = NULL) 
 }
 
 # --- 3. write the three CSV file types in schema column order ---
-write_csvs <- function(tab, out_dir, state_meta) {
-  glab <- tab$grade_lab
-  cov_block <- cov_block(glab)
-  rnd <- function(d) { for (c in names(d)) if (is.numeric(d[[c]])) d[[c]] <- round(d[[c]], 4); d }
-  slug <- state_meta$slug
-  dir.create(file.path(out_dir, "states", slug, "counties"), recursive = TRUE, showWarnings = FALSE)
-
-  # county rows -> states/<slug>.csv
-  cty <- tab$counties[, c("county_name", "county_fips", "n_schools",
-                          "pct_schools_below_95", cov_block), with = FALSE]
-  setnames(cty, "county_name", "county")
-  cty[, county := title_case(county)]
-  fwrite(rnd(cty), file.path(out_dir, "states", paste0(slug, ".csv")))
-
-  # combined states/<slug>/schools.csv: one row per school, the file the app
-  # loads. Carries county, lon/lat (for map dot placement), and a no_data flag
-  # for schools with location but no fit coverage (#60). The per-county download
-  # files are derived from this at build time (#65), not written here.
-  sch_cols <- c("school_id", "school_name", "county_name", "enrollment",
-                "lon", "lat", "no_data", cov_block)
-  schools_all <- tab$schools[!is.na(county_name), ..sch_cols]
-  setnames(schools_all, "county_name", "county")
-  schools_all[, county := title_case(county)]   # match atlas county names (loader joins on these)
-  schools_all[, no_data := as.integer(no_data)]  # emit 0/1 not TRUE/FALSE
-  fwrite(rnd(schools_all), file.path(out_dir, "states", slug, "schools.csv"))
-
-  # state row -> states.csv (create/replace this state's row)
-  st <- tab$state[, c("state", "state_fips", "state_name", "n_schools",
-                      "pct_schools_below_95", cov_block), with = FALSE]
-  states_csv <- file.path(out_dir, "states.csv")
-  if (file.exists(states_csv)) {
-    cur <- fread(states_csv); cur <- cur[state != slug]
-    st <- rbind(cur, st, fill = TRUE)
-  }
-  fwrite(rnd(st), states_csv)
-  invisible(tab)
+write_csvs <- function(tab, out_dir, meta) {
+  counties <- copy(tab$counties)
+  schools <- copy(tab$schools)
+  setnames(counties, "county_name", "county")
+  setnames(schools, "county_name", "county")
+  counties[, county := title_case(county)]
+  schools[, county := title_case(county)]
+  schools[, no_data := as.integer(no_data)]
+  write_submission(tab$state, counties, schools, out_dir, meta)
 }
 
-# ============================ driver ============================
-OUT <- Sys.getenv("OUT_DIR", unset = "scripts/build-data/out")
-
-if (Sys.getenv("STUB") == "1") {
-  message("STUB MODE: placeholder coverage on real loc_ids; tests join + schema output")
-  cleaned <- readRDS("scripts/build-data/inputs/cleaned_data.rds")
-  linkage <- readRDS("scripts/build-data/inputs/linkage_key.rds")
-  locs    <- as.data.table(readRDS("scripts/build-data/inputs/locations.rds"))
-  setnames(locs, "id", "loc_id", skip_absent = TRUE)
-  state_id <- locs[is.na(parent_id), loc_id]
-  locs[, layer := fifelse(loc_id == state_id, 1L,
-                   fifelse(parent_id == state_id, 2L, 3L))]
-  # fabricate per-draw predictions on the real loc_ids (8 draws, plausible coverage)
-  set.seed(1)
-  draws <- CJ(loc_id = locs$loc_id, grade = GRADE_LAB, sample_id = 1:8)
-  base_cov <- setNames(runif(nrow(locs), 0.85, 0.97), locs$loc_id)
-  gbump <- setNames(c(-0.04, 0, .01, .015, .02, .02), GRADE_LAB)
-  draws[, p_obs := pmin(0.999, pmax(0.5,
-        base_cov[as.character(loc_id)] + gbump[grade] + rnorm(.N, 0, 0.01)))]
-  cov <- build_cov_tables(draws, locs)
-  meta <- list(slug = "ca", fips = "06", name = "California")
-  tab <- assemble(cov, cleaned, linkage, meta)
-  write_csvs(tab, OUT, meta)
-  message("wrote stub CSVs under ", OUT)
-} else if (nzchar(Sys.getenv("FIT_PATH"))) {
-  cleaned <- readRDS(Sys.getenv("CLEANED_PATH"))
-  linkage <- readRDS(Sys.getenv("LINKAGE_PATH"))
-  meta <- list(slug = Sys.getenv("STATE"),
-               fips = Sys.getenv("STATE_FIPS"),
-               name = Sys.getenv("STATE_NAME"))
-  message("REAL RUN for ", meta$slug)
-  # cache the expensive predict step so format iteration is cheap
-  cache <- Sys.getenv("COV_CACHE", unset = file.path(OUT, "..", "cov_cache.rds"))
-  if (file.exists(cache) && Sys.getenv("FORCE_PREDICT") != "1") {
-    message("using cached coverage: ", cache)
-    cov <- readRDS(cache)
-  } else {
-    fit <- readRDS(Sys.getenv("FIT_PATH"))
-    cov <- predict_coverage(fit)
-    dir.create(dirname(cache), recursive = TRUE, showWarnings = FALSE)
-    saveRDS(cov, cache); message("cached coverage -> ", cache)
-  }
-  tab <- assemble(cov, cleaned, linkage, meta)
-  write_csvs(tab, OUT, meta)
-  message("wrote CSVs under ", OUT)
+# Driver: prediction caches are tied to the fit and producer code.
+for (key in c("FIT_PATH", "CLEANED_PATH", "LINKAGE_PATH", "META_PATH", "OUT_DIR")) {
+  if (!nzchar(Sys.getenv(key))) stop(paste("Set", key))
+}
+OUT <- Sys.getenv("OUT_DIR")
+if (file.exists(OUT)) stop("OUT_DIR must be a new directory")
+meta <- read_state_metadata()
+cleaned <- readRDS(Sys.getenv("CLEANED_PATH"))
+linkage <- readRDS(Sys.getenv("LINKAGE_PATH"))
+script_arg <- grep("^--file=", commandArgs(FALSE), value = TRUE)
+script_path <- sub("^--file=", "", script_arg)
+cache_key <- list(
+  hashes = unname(tools::md5sum(c(Sys.getenv("FIT_PATH"), script_path, HELPERS))),
+  model_version = as.character(packageVersion("imuGAP"))
+)
+cache <- Sys.getenv("COV_CACHE")
+cached <- if (nzchar(cache) && file.exists(cache) && Sys.getenv("FORCE_PREDICT") != "1") readRDS(cache) else NULL
+if (is.list(cached) && identical(cached$key, cache_key)) {
+  cov <- cached$coverage
 } else {
-  stop("set STUB=1 or FIT_PATH=... (with CLEANED_PATH, LINKAGE_PATH, STATE, STATE_FIPS, STATE_NAME)")
+  cov <- predict_coverage(readRDS(Sys.getenv("FIT_PATH")))
+  if (nzchar(cache)) {
+    dir.create(dirname(cache), recursive = TRUE, showWarnings = FALSE)
+    saveRDS(list(key = cache_key, coverage = cov), cache)
+  }
 }
+state_meta <- list(slug = meta$code, fips = meta$fips, name = meta$fullName)
+tab <- assemble(cov, cleaned, linkage, state_meta)
+write_csvs(tab, OUT, meta)
+message("Wrote submission under ", OUT, "; run prepare.py before publication")

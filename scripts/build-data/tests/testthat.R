@@ -1,9 +1,8 @@
-# Standalone testthat runner for the #20 CSV producer helpers.
+# Standalone testthat runner for the CSV producer helpers.
 #
 # The producers are scripts, not a package, so there is no R CMD check entry
 # point. This runner sources the extracted helpers and runs the testthat suite
-# in scripts/build-data/tests/testthat/. The producer-tests GitHub Actions
-# workflow invokes it with:
+# in scripts/build-data/tests/testthat/. The test suite invokes it with:
 #   Rscript scripts/build-data/tests/testthat.R
 # from the repo root.
 library(testthat)
