@@ -84,17 +84,16 @@ school_columns <- function(grade_lab = c("K", "1", "2", "3", "4", "5"))
     "lon", "lat", "no_data", cov_block(grade_lab))
 
 # Metadata is supplied explicitly; no state identity is built into a producer.
-read_state_metadata <- function() {
+read_state_metadata <- function(schema_path = "schema/meta-schema.json") {
   path <- Sys.getenv("META_PATH")
   if (!nzchar(path) || !file.exists(path)) stop("META_PATH must name a completed meta.json")
-  meta <- jsonlite::fromJSON(path)
-  fields <- c("code", "name", "fullName", "dataDir", "fips", "sourceUrl", "sourceLabel")
-  if (!is.list(meta) || !setequal(names(meta), fields) ||
-      !all(vapply(meta, function(v) is.character(v) && length(v) == 1L &&
-                  !is.na(v) && nzchar(trimws(v)) && v == trimws(v), logical(1))))
-    stop("meta.json must contain the seven nonempty metadata strings")
-  if (!grepl("^[a-z]{2}$", meta$code) || !grepl("^[0-9]{2}$", meta$fips) ||
-      meta$name != toupper(meta$code)) stop("Invalid metadata identity")
+  # Validate the JSON before parsing so arrays cannot be simplified to strings.
+  jsonvalidate::json_validate(path, schema_path, engine = "ajv", error = TRUE)
+  meta <- jsonlite::fromJSON(path, simplifyVector = FALSE)
+  # These rules are not expressed by the metadata schema.
+  if (!all(vapply(meta, function(v) nzchar(trimws(v)) && v == trimws(v), logical(1))))
+    stop("meta.json values must be nonempty, trimmed strings")
+  if (meta$name != toupper(meta$code)) stop("Invalid metadata identity")
   meta
 }
 

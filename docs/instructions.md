@@ -180,10 +180,13 @@ state, counties, schools, attribution, and missing values display correctly.
 ## Optional R builders
 
 Use a builder only if its input and aggregation policies fit the source.
-Install `data.table` and `jsonlite`, supply completed metadata, and use a new
-output directory. Keep raw builder sources outside the publication directory;
+Install `data.table`, `jsonlite`, and `jsonvalidate`, supply completed metadata,
+and use a new output directory. Keep raw builder sources outside the publication directory;
 the examples below use the ignored `output/sources/` working directory.
 Run `prepare.py prepare` on the builder output before export.
+
+Builders validate metadata against `schema/meta-schema.json`, then check trimmed
+values and agreement between the state code and name.
 
 ### Existing estimates and geography
 
@@ -251,5 +254,6 @@ python3 -m unittest discover -s tests -v
 Rscript scripts/build-data/tests/testthat.R
 ```
 
-The R suite requires `testthat`, `data.table`, and `jsonlite`. Python tests also
-exercise the estimates builder when R and its dependencies are available.
+The R suite requires `testthat`, `data.table`, `jsonlite`, and `jsonvalidate`.
+Python tests also exercise the estimates builder when R and its dependencies
+are available.

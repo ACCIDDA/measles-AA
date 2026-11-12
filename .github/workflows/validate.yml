@@ -42,7 +42,7 @@ jobs:
       - name: Install and verify R test dependencies
         shell: Rscript {0}
         run: |
-          packages <- c("testthat", "data.table", "jsonlite")
+          packages <- c("testthat", "data.table", "jsonlite", "jsonvalidate")
           install.packages(packages)
           stopifnot(all(vapply(packages, requireNamespace, logical(1), quietly = TRUE)))
       - run: Rscript scripts/build-data/tests/testthat.R

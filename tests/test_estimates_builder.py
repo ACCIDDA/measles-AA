@@ -15,10 +15,10 @@ class EstimatesBuilderTests(unittest.TestCase):
         if not shutil.which('Rscript'):
             raise unittest.SkipTest('Rscript is not installed')
         check = subprocess.run(['Rscript', '-e',
-            'quit(status=if (all(sapply(c("data.table","jsonlite"), requireNamespace, quietly=TRUE))) 0 else 1)'],
+            'quit(status=if (all(sapply(c("data.table","jsonlite","jsonvalidate"), requireNamespace, quietly=TRUE))) 0 else 1)'],
             capture_output=True)
         if check.returncode:
-            raise unittest.SkipTest('R packages data.table and jsonlite are required')
+            raise unittest.SkipTest('R packages data.table, jsonlite, and jsonvalidate are required')
 
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
