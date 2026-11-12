@@ -171,11 +171,57 @@ workflow: call validation in the publishing workflow before deployment, or
 explicitly dispatch this workflow. See GitHub's
 [workflow trigger rules](https://docs.github.com/en/actions/how-tos/writing-workflows/choosing-when-your-workflow-runs/triggering-a-workflow).
 
-To make your data available to the dashboard, configure hosting for your
-repository so the four `data/` URLs are publicly accessible with cross-origin
-access. Send your state code and deployed base URL (with a trailing slash) to
-the dashboard maintainers for registration and activation. Confirm that your
-state, counties, schools, attribution, and missing values display correctly.
+## 4. Publish your data with GitHub Pages
+
+Do this in your state data repository before registering it with the dashboard.
+The template validates files; the dashboard registration workflow records their
+hosting address. Neither currently enables GitHub Pages for your repository.
+
+1. Merge the reviewed data into your public repository's default branch after
+   the validation checks pass. Include an empty `.nojekyll` file at the repository
+   root to publish the files without Jekyll processing.
+2. Open **Settings → Pages** in that repository. Under **Build and deployment**,
+   select **Deploy from a branch**, choose your default branch (usually `main`),
+   select **/(root)**, and save. You need permission to manage Pages settings.
+3. Wait for the Pages build and deployment to finish in **Actions**. Copy the
+   site address displayed in **Settings → Pages**. For a standard project site,
+   it is `https://OWNER.github.io/REPOSITORY/`.
+4. Open each of these addresses, replacing `OWNER` and `REPOSITORY` with yours,
+   and confirm that it serves the expected file:
+
+   ```text
+   https://OWNER.github.io/REPOSITORY/data/state.csv
+   https://OWNER.github.io/REPOSITORY/data/counties.csv
+   https://OWNER.github.io/REPOSITORY/data/schools.csv
+   https://OWNER.github.io/REPOSITORY/data/meta.json
+   ```
+
+These files are the provider's API; no separate web application is required.
+If a file returns 404, check the deployment result, selected branch, and committed
+`data/` files before registering. See GitHub's
+[Pages publishing instructions](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
+
+After this one-time setup, pushes to the publishing branch trigger deployment.
+Branch-based Pages publishing does not wait for this template's validation
+workflow, so require passing checks before merging changes into that branch.
+The `GITHUB_TOKEN` publishing exception described above still applies.
+
+## 5. Register with the dashboard
+
+Follow the dashboard's
+[registration instructions](https://github.com/kgbrown5/measles-dashboard/blob/dev/docs/REGISTRATION.md):
+run **Register State Repository** in the dashboard repository with your state
+code and state repository's HTTPS GitHub URL. The workflow validates the repository
+data and opens a registration PR for review.
+
+The current registration script generates `base_url` using the standard
+`https://OWNER.github.io/REPOSITORY/` pattern. Confirm that the PR's address matches
+your working Pages address, especially after a repository rename or when using
+a custom domain. Registration checks repository files through GitHub's API;
+it does not establish that the hosted files are reachable.
+
+After the registration is merged and the dashboard is deployed, confirm that
+your state, counties, schools, attribution, and missing values display correctly.
 
 ## Optional R builders
 
