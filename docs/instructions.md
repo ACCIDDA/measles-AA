@@ -1,8 +1,8 @@
 # Data preparation and publication instructions
 
 Use this guide in your own state data repository created from this template.
-Run commands from your repository root. Python 3.10+ is required; the Python
-workflow has no third-party dependencies. R is needed only for optional builders.
+Upload or edit completed files under `data/` and open a pull request for automated
+validation. For local preparation, run the commands below from your repository root.
 
 ## Set up your repository once
 
@@ -29,6 +29,8 @@ merging are configured in your own repository.
 Record the source owner/URL, reporting period, population/grades, MMR dose,
 units, suppression rules, and whether values are reported or modeled. Retain
 original files and transformation code. Publish aggregate coverage records only.
+
+Copy the template files into `data/` using GitHub's file editor or these local commands:
 
 ```sh
 mkdir -p data
@@ -75,21 +77,19 @@ All metadata values must be nonempty, trimmed strings. Metadata is preserved
 during preparation. Validation checks internal state identity agreement, not
 whether the code/name/FIPS is officially assigned.
 
-For a fictional trial before mapping your own data:
-
-```sh
-python3 scripts/prepare.py prepare --input data/examples --output output/example
-python3 scripts/prepare.py validate --input output/example
-```
-
-The example is a development fixture, not a submission for publication.
-
 ## 2. Prepare, validate, and review
+
+For local preparation and complete submission validation, use Python 3.10+.
+The optional R builders prepare data and validate metadata using R. An independent
+R route for complete submission validation remains to be implemented.
 
 ```sh
 python3 scripts/prepare.py prepare --input data --output output/prepared
 python3 scripts/prepare.py validate --input output/prepared
 ```
+
+For a local trial with fictional data, use `data/examples` as the input and
+`output/example` as the output. The example is a development fixture.
 
 Use a new output directory outside the input folder for each run. Inputs are
 never overwritten. Optional `--state xx` asserts an expected state code; otherwise
@@ -140,6 +140,10 @@ cp output/site/data/* data/
 python3 scripts/prepare.py validate-published --input data
 ```
 
+For submissions prepared through GitHub, upload or edit the four completed files
+directly in `data/`, following the file requirements above. GitHub Actions validates
+the submitted files as they are; source mapping and preparation happen before submission.
+
 Commit the four files in `data/` together and open a pull request into your own
 repository's default branch. Keep reports and source documentation outside
 `data/`. `validate-published` applies the strict checks directly to the publication
@@ -154,7 +158,7 @@ pushes, merge queues, and manual dispatch. It supplies three status checks:
 | `R builder tests` | R helpers and an estimates-to-bundle integration test, with required packages installed |
 | `Published data validation` | Preparation/export example, then the actual committed `data/` bundle |
 
-The third check is a repository check after local preparation and review. It
+The third check validates the committed submission after preparation and review. It
 fails for malformed or incomplete publication data, including deletion of all
 published files. Before any publication files exist in the branch history
 (excluding `data/templates/` and `data/examples/`), it explicitly
