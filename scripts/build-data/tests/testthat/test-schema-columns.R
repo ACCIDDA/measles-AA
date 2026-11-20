@@ -1,15 +1,3 @@
-# Wide #20 schema column set + order contract (build_state.R / build_nc_from_estimates.R).
-#
-# The producers emit a fixed column order at every level (state/county/school).
-# The consumer side pins the same order in src/data/schema.js (COVERAGE_BLOCK +
-# the per-file identity columns) and csvSchema.test.js validates the real CSVs
-# against it. These tests pin the PRODUCER side so a reorder/rename in the R
-# helpers is caught here, before the CSVs are regenerated.
-#
-# The expected lists below are transcribed from src/data/schema.js; if that file
-# changes the column contract, this test must be updated in lockstep (and so must
-# the producers).
-
 GRADES <- c("K", "1", "2", "3", "4", "5")
 
 expected_cov_block <- c(
@@ -61,4 +49,11 @@ test_that("cov_block is grade-label driven (custom labels propagate in order)", 
                      "coverage_ci_low_K", "coverage_ci_low_1",
                      "coverage_ci_high_K", "coverage_ci_high_1",
                      "prob_below_95", "tier"))
+})
+
+test_that("producer columns match the pinned JSON contract", {
+  schema <- jsonlite::fromJSON(file.path(build_data, "..", "..", "schema", "dashboard-schema.json"))$files
+  expect_equal(state_columns(), schema[["data/states.csv"]]$columns$name)
+  expect_equal(county_columns(), schema[["data/states/{state}.csv"]]$columns$name)
+  expect_equal(school_columns(), schema[["data/states/{state}/schools.csv"]]$columns$name)
 })
