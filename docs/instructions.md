@@ -7,8 +7,10 @@ validation. For local preparation, run the commands below from your repository r
 ## Set up your repository once
 
 The template includes `.github/workflows/validate.yml`, so you do not need to
-write CI checks. GitHub settings for running checks and requiring them before
-merging are configured in your own repository.
+write CI checks or a deployment workflow. GitHub settings for running checks,
+enabling Pages publication, and requiring checks before merging are configured
+in your own repository. Complete the Actions and Pages setup in section 4 before
+your first deployment.
 
 1. Keep the workflow file on your default branch. Open your repository's
    **Actions** tab and enable Actions if prompted. Forks require this explicitly;
@@ -167,9 +169,9 @@ Warnings remain advisory and appear in the Actions log. CI checks exported data
 and synthetic builder fixtures; validate your own model fit separately if using
 the fitted-model builder.
 
-Wait for all three checks to pass before merging. If your repository deploys
-automatically, make deployment wait for validation: a failed push check alone
-does not stop hosting. If your automated publisher commits with `GITHUB_TOKEN`,
+Wait for all three checks to pass before merging. The included Pages deployment
+waits for all three checks to pass for the same commit on the default branch.
+If your automated publisher commits with `GITHUB_TOKEN`,
 its push does not normally start another
 workflow: call validation in the publishing workflow before deployment, or
 explicitly dispatch this workflow. See GitHub's
@@ -177,38 +179,79 @@ explicitly dispatch this workflow. See GitHub's
 
 ## 4. Publish your data with GitHub Pages
 
-Do this in your state data repository before registering it with the dashboard.
-The template validates files; the dashboard registration workflow records their
-hosting address. Neither currently enables GitHub Pages for your repository.
+The included [Validate workflow](../.github/workflows/validate.yml) automatically
+publishes the four completed `data/` files after all three validation jobs pass.
+Deployment runs on pushes to your repository's default branch (whatever its name)
+and manual runs on that branch. Pull requests, merge queues, other branches, and
+an unused template with no submitted data do not deploy. Invalid or incomplete
+data blocks deployment and leaves the previously published site in place.
 
-1. Merge the reviewed data into your public repository's default branch after
-   the validation checks pass. Include an empty `.nojekyll` file at the repository
-   root to publish the files without Jekyll processing.
-2. Open **Settings → Pages** in that repository. Under **Build and deployment**,
-   select **Deploy from a branch**, choose your default branch (usually `main`),
-   select **/(root)**, and save. You need permission to manage Pages settings.
-3. Wait for the Pages build and deployment to finish in **Actions**. Copy the
-   site address displayed in **Settings → Pages**. For a standard project site,
-   it is `https://OWNER.github.io/REPOSITORY/`.
-4. Open each of these addresses, replacing `OWNER` and `REPOSITORY` with yours,
-   and confirm that it serves the expected file:
+### Enable the required GitHub settings once
 
-   ```text
-   https://OWNER.github.io/REPOSITORY/data/state.csv
-   https://OWNER.github.io/REPOSITORY/data/counties.csv
-   https://OWNER.github.io/REPOSITORY/data/schools.csv
-   https://OWNER.github.io/REPOSITORY/data/meta.json
-   ```
+**You must enable GitHub Actions and GitHub Pages in your own repository on
+GitHub.com.** These settings are not enabled by cloning the repository locally,
+and are not copied automatically from this template. Use a public repository for
+free Pages hosting and have a repository administrator complete these steps:
+
+1. Keep `.github/workflows/validate.yml` on your repository's default branch.
+   Open **Actions** and enable workflows if prompted, especially in a fork.
+2. Open **Settings → Actions → General → Actions permissions**. Select
+   **Allow all actions and reusable workflows**, then **Save**. If your organization
+   requires selected actions instead, allow GitHub-authored actions (`actions/*`)
+   and `r-lib/actions/setup-r@v2`, including their dependencies. If the setting
+   is locked by organization or enterprise policy, ask its administrator to
+   allow these actions for your repository.
+3. Under **Workflow permissions** on the same page, the default read-only setting
+   can remain selected. The workflow explicitly grants `pages: write` and
+   `id-token: write` to its deployment job; these permissions must be permitted
+   by your organization's policy. It uses the automatic `GITHUB_TOKEN`, so no
+   personal access token or additional secret is needed.
+4. Open **Settings → Pages → Build and deployment**. Set **Source** to
+   **GitHub Actions**. The repository already includes the workflow, so there is
+   no need to add a suggested starter workflow or a `.nojekyll` file.
+5. If a `github-pages` environment exists under **Settings → Environments**, check
+   that its deployment branch rules allow your default branch. Any configured
+   required reviewers must approve each deployment before it can proceed.
+6. Merge your reviewed, completed data into the default branch. If the data is
+   already there, open **Actions → Validate → Run workflow**, select the default
+   branch, and click **Run workflow**. Changing permissions alone does not start
+   a workflow run. For a new template with no submission yet, first complete
+   sections 1–3; fictional examples are never published.
+7. Watch **Actions → Validate**. After the three checks pass, **Build Pages
+   artifact** packages the files and **Deploy GitHub Pages** publishes the site.
+   Copy the site address from the deployment or **Settings → Pages**.
+
+For details, see GitHub's [Actions permission settings](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository),
+[Pages source setup](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site),
+and [custom Pages workflow permissions](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
+
+### Verify publication
+
+Open each address below, replacing `OWNER` and `REPOSITORY` with yours, and
+confirm that it serves the expected file:
+
+```text
+https://OWNER.github.io/REPOSITORY/data/state.csv
+https://OWNER.github.io/REPOSITORY/data/counties.csv
+https://OWNER.github.io/REPOSITORY/data/schools.csv
+https://OWNER.github.io/REPOSITORY/data/meta.json
+```
 
 These files are the provider's API; no separate web application is required.
-If a file returns 404, check the deployment result, selected branch, and committed
-`data/` files before registering. See GitHub's
-[Pages publishing instructions](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
+Only these four files are included in the deployed artifact. There is no homepage
+at the site root; verify the `/data/` addresses above. Templates, examples,
+reports, and source files are not published.
 
-After this one-time setup, pushes to the publishing branch trigger deployment.
-Branch-based Pages publishing does not wait for this template's validation
-workflow, so require passing checks before merging changes into that branch.
-The `GITHUB_TOKEN` publishing exception described above still applies.
+If deployment fails with a Pages configuration or permission error, recheck
+steps 2–5 and rerun **Validate** on the default branch. If deployment is skipped,
+check the selected branch, the three validation jobs, and whether completed
+publication files exist in `data/`. For a 404, check the latest deployment result
+and the exact site address before registering.
+
+After this one-time setup, each push or merge to the default branch validates and
+deploys automatically. The `GITHUB_TOKEN` publishing exception described above
+still applies to commits created by another automation; explicitly dispatch
+**Validate** on the default branch in that case.
 
 ## 5. Register with the dashboard
 

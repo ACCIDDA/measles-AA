@@ -13,7 +13,8 @@ The repository includes:
 - `scripts/`: preparation, validation, and export tools, plus optional R builders
   for existing estimates and fitted models.
 - `tests/` and a GitHub Actions workflow: automated checks for the tools and
-  submitted data.
+  submitted data, followed by GitHub Pages deployment from the default branch
+  once Actions and Pages are enabled in your repository.
 
 The workflow takes mapped source data through preparation, validation, and export
 for dashboard publication. Contributors remain responsible for reviewing their
